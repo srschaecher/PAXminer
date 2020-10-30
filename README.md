@@ -72,10 +72,10 @@ Don't worry, it's a lot easier than it sounds. You must have admin privileges in
 
 ## Creating an AWS RDS Database
 
-w
+*Under Construction...*
 
 ## Feedback
-- This repository. Submit a PR with your README!
+- Submit a PR with your feedback!
 
 ## Contribute
 
