@@ -22,6 +22,7 @@ Tracking this information lets you ask many different questions about your F3 at
 - *Qcharter.py* : Python script that creates histograms for each AO that shows who has Q'd and how many times by month. Sends charts as messages to each AO channel in Slack.
 - *f3stl_mysql.mwb* : MySQL Database schema to implement the database.
 - *credeintials_template.ini* : Required file that contains Slack and AWS access tokens (populated by you) required by each of the scripts. You will need to add your unique access info, save as credentials.ini, and ensure you re-point the scripts to your credentials.ini file.
+- *Backblast_Template.doc* : Standard template for Qs to use with backblast posts. This template is parsed by the scripts to find pertinent backblast info. The template must be followed or the scripts will not find the requisite info.
 - *LICENSE* : GNU Public License
 - *README.md* : This readme
 
