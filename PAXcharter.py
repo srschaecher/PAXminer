@@ -58,7 +58,6 @@ for user_id in users_df['user_id']:
         with mydb.cursor() as cursor:
             sql = "SELECT * FROM attendance_view WHERE PAX = (SELECT user_name FROM users WHERE user_id = %s) ORDER BY Date"
             user_id_tmp = user_id
-            #user_id_tmp = 'U0187M4NWG4'
             val = user_id_tmp
             cursor.execute(sql, val)
             attendance_tmp = cursor.fetchall()
@@ -67,8 +66,8 @@ for user_id in users_df['user_id']:
             day = []
             year = []
             count = attendance_tmp_df.shape[0]
-            if user_id_tmp == 'U01BZ3M5V4H': #Use this to send a graph to only 1 specific PAX
-            #if count > 0: # This sends a graph to ALL PAX who have attended at least 1 beatdown
+            #if user_id_tmp == 'U014PPDG5U3': #Use this to send a graph to only 1 specific PAX
+            if count > 0: # This sends a graph to ALL PAX who have attended at least 1 beatdown
                 for Date in attendance_tmp_df['Date']:
                 #for index, row in attendance_tmp_df.iterrows():
                     datee = datetime.datetime.strptime(Date, "%Y-%m-%d")
