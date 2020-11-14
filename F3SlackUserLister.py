@@ -1,4 +1,4 @@
-#!/Users/schaecher/.pyenv/bin/python3.7
+#!/Users/schaecher/.pyenv/versions/3.7.3/bin/python3.7
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries Slack for all PAX Users and inserts User IDs/names into the AWS database for recordkeeping.
@@ -73,4 +73,4 @@ try:
 
 finally:
     mydb.close()
-print('Finished. You may go back to your day.')
+print('Finished - users are up to date.')

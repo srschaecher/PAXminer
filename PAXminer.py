@@ -1,10 +1,11 @@
-#!/Users/schaecher/.pyenv/bin/python3.7
+#!/Users/schaecher/.pyenv/versions/3.7.3/bin/python3.7
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries Slack for User, Channel, and Conversation (channel) history and then parses all conversations to find Backblasts.
 All Backblasts are then parsed to collect the PAX that attend any given workout and puts those attendance records into the AWS database for recordkeeping.
 '''
 
+import warnings
 from slacker import Slacker
 from datetime import datetime, timedelta
 import pandas as pd
@@ -75,7 +76,7 @@ try:
         channels = cursor.fetchall()
         channels_df = pd.DataFrame(channels, columns={'channel_id', 'ao'})
 finally:
-    print('Running PAXminer - finding PAX that attended workouts')
+    print('Finding all PAX that attended recent workouts - stand by.')
 
 # Get all channel conversation
 messages_df = pd.DataFrame([]) #creates an empty dataframe to append to
@@ -110,6 +111,8 @@ f3_df = f3_df[['timestamp', 'date', 'time', 'channel_id', 'ao', 'user_id', 'user
 # This pattern finds username links followed by commas: pat = r'(?<=\\xa0).+?(?=,)'
 pat = r'(?<=\<).+?(?=>)' # This pattern finds username links within brackets <>
 pax_attendance_df = pd.DataFrame([])
+warnings.filterwarnings("ignore", category=DeprecationWarning) #This prevents displaying the Deprecation Warning that is present for the RegEx lookahead function used below
+
 def list_pax():
     #paxline = [line for line in text_tmp.split('\n') if 'pax'.casefold() in line.casefold()]
     paxline = re.findall(r'(?<=\n)\*?(?i)PAX\*?:\*?.+?(?=\n)', str(text_tmp), re.MULTILINE) #This is a case insensitive regex looking for \nPAX with or without an * before PAX
@@ -155,4 +158,4 @@ try:
 
 finally:
     mydb.close()
-print('Finished. You may go back to your day.')
+print('Finished. You may go back to your day!')

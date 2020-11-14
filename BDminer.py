@@ -1,10 +1,11 @@
-#!/Users/schaecher/.pyenv/bin/python3.7
+#!/Users/schaecher/.pyenv/versions/3.7.3/bin/python3.7
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries Slack for User, Channel, and Conversation (channel) history and then parses all conversations to find Backblasts.
 All Backblasts are then parsed to collect the BEATDOWN information for any given workout and puts those attendance records into the AWS F3STL database for recordkeeping.
 '''
 
+import warnings
 from slacker import Slacker
 from datetime import datetime, timedelta
 import pandas as pd
@@ -107,6 +108,8 @@ f3_df = f3_df[['timestamp', 'date', 'time', 'channel_id', 'ao', 'user_id', 'user
 # This pattern finds the Q user ID
 pat = r'(?<=\<).+?(?=>)' # This pattern finds username links within brackets <>
 bd_df = pd.DataFrame([])
+warnings.filterwarnings("ignore", category=DeprecationWarning) #This prevents displaying the Deprecation Warning that is present for the RegEx lookahead function used below
+
 def bd_info():
     # Find the Q information
     qline = re.findall(r'(?<=\n)\*?Q\*?:.+?(?=\n)', str(text_tmp), re.MULTILINE) #This is regex looking for \nQ: with or without an * before Q
@@ -209,4 +212,4 @@ try:
         mydb.commit()
 finally:
     mydb.close()
-print('Finished. You may go back to your day.')
+print('Finished. Beatdowns are up to date.')

@@ -1,4 +1,4 @@
-#!/Users/schaecher/.pyenv/bin/python3.7
+#!/Users/schaecher/.pyenv/versions/3.7.3/bin/python3.7
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries Slack for Channels and inserts channel IDs/names into the AWS database for recordkeeping.
@@ -65,6 +65,10 @@ try:
     with mydb.cursor() as cursor3:
         sql3 = "UPDATE aos SET backblast = 0 where backblast IS NULL"
         cursor3.execute(sql3)
+        mydb.commit()
+    with mydb.cursor() as cursor4:
+        sql4 = "UPDATE aos SET backblast = 1 where ao LIKE 'ao%' OR ao = 'general' OR ao = 'rucking' OR ao = 'blackops' OR ao = 'qsource' OR ao = 'f3-dads-2-point-0-saturday-beatdown'"
+        cursor4.execute(sql4)
         mydb.commit()
 finally:
     mydb.close()

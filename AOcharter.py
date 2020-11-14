@@ -2,7 +2,7 @@
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries Slack for all PAX Users and their respective beatdown attendance. It then generates bar graphs
-on attendance for each member and sends it to them in a private Slack message.
+on total # of unique individuals that attended aeach AO.
 '''
 
 from slacker import Slacker
