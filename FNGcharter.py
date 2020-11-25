@@ -1,4 +1,4 @@
-#!/Users/schaecher/.pyenv/versions/3.7.3/bin/python3.7
+#!/usr/bin/env python
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries the AWS F3(region) database for all beatdown records. It then generates bar graphs

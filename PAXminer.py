@@ -1,4 +1,4 @@
-#!/Users/schaecher/.pyenv/versions/3.7.3/bin/python3.7
+#!/usr/bin/env python
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries Slack for User, Channel, and Conversation (channel) history and then parses all conversations to find Backblasts.
