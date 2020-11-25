@@ -3,8 +3,6 @@
 # PAXminer
 PAXminer is a set of scripts that retrieve and parse messages from an F3 unit's Slack communications channels in order to pull key information out of Backblasts and store that information in a database for recordkeeping purposes. PAXminer pulls the following infomation from Backblasts and sends it to a shared database in AWS RDS (Amazon Web Services - Relational Database Service). Each region using PAXminer gets a dedicated schema for their data.
 
-This tool started out with me saying "there HAS to be a beter way to do this" as we were collecting our F3 posting stats manually in Excel. We are adding new things to the process every day! The more regions that get involved, the better and more standardized we can make it! All collaboration is welcome!
-
 - AO
 - Date of the Beatdown
 - Who was the Q
@@ -12,6 +10,8 @@ This tool started out with me saying "there HAS to be a beter way to do this" as
 - What PAX attended?
 - How many attended in total?
 - Any FNGs?
+
+This tool started out with me saying "there HAS to be a beter way to do this" as we were collecting our F3 posting stats manually in Excel. We are adding new things to the process every day! The more regions that get involved, the better and more standardized we can make it! All collaboration is welcome!
 
 Tracking this information lets you ask many different questions about your F3 attendance patterns, such as:
 
