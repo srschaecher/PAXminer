@@ -3,6 +3,8 @@
 # PAXminer
 PAXminer is a set of scripts that retrieve and parse messages from an F3 unit's Slack communications channels in order to pull key information out of Backblasts and store that information in a database for recordkeeping purposes. PAXminer pulls the following infomation from Backblasts and sends it to a shared database in AWS RDS (Amazon Web Services - Relational Database Service). Each region using PAXminer gets a dedicated schema for their data.
 
+This tool started out with me saying "there HAS to be a beter way to do this" as we were collecting our F3 posting stats manually in Excel. We are adding new things to the process every day! The more regions that get involved, the better and more standardized we can make it! All collaboration is welcome!
+
 - AO
 - Date of the Beatdown
 - Who was the Q
@@ -18,9 +20,12 @@ Tracking this information lets you ask many different questions about your F3 at
 - *F3SlackUserLister.py* : Python script that pulls all PAX user info from Slack and inserts it into the database. User info is required for the rest of the processes.
 - *BDminer.py* : Python script that pulls Beatdown specific information and sends to the database (date, AO, Q, Co-Q, Count, FNGs, etc)
 - *PAXminer.py* : Python script that finds all backblasts from AO channels (including rucking, blackops) and parses them for all of the PAX in attendance. Inserts all attendance records into the database.
-- *PAXcharter.py* : Python script that creates individual bar charts for every user who has attended a beatdown, showing # of posts by AO by month. Sends charts as direct messages to each user in Slack.
-- *Qcharter.py* : Python script that creates histograms for each AO that shows who has Q'd and how many times by month. Sends charts as messages to each AO channel in Slack.
+- *PAXminer_Daily_Execution.py* : Python script that is used for automating the daily backblast mining and data capture. This process first pulls a list of all F3 regions using PAXminer, and then runs the above scripts for each of their Slack environments. The resulting data gets put into each region's database tables.
+- *PAXcharter.py* : Python script that creates individual bar charts for every user who has attended a beatdown, showing # of posts by AO by month. Sends charts as direct messages to each user in Slack. Intended to run monthly.
+- *Qcharter.py* : Python script that creates histograms for each AO that shows who has Q'd and how many times by month. Sends charts as messages to each AO channel in Slack. Intended to run monthly.
+- *AOcharter.py* : Python script that creates a histogram of AO specific stats (# of posts) by month and sends to the AO slack channel. Intended to run monthly.
 - *f3stl_mysql.mwb* : MySQL Database schema to implement the database.
+- *FNGcharter.py* : Python script that creates a histogram of FNG counts by AO. Intended to run monthly.
 - *credeintials_template.ini* : Required file that contains AWS access tokens. This is managed by the PAXminer admin, nothing you need to do unless you choose to run PAXminer on your own. If so, you will need to add your unique access info, save as credentials.ini, and ensure you re-point the scripts to your credentials.ini file.
 - *Backblast_Template.doc* : Standard template for Qs to use with backblast posts. This template is parsed by the scripts to find pertinent backblast info. The template must be followed or the scripts will not find the requisite info.
 - *LICENSE* : GNU Public License
