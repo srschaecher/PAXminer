@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
-echo "Executing F3SlackUserLister"
+echo "Executing PAXcharter"
 cd /Users/schaecher/PycharmProjects/PAXminer/
 date >> ./PAXminer.log
-./F3SlackUserLister.py
+./PAXcharter.py
 echo "Executing BDminer"
 ./BDminer.py
 echo "Executing PAXminer"

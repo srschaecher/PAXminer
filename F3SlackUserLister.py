@@ -1,28 +1,32 @@
-#!/Users/schaecher/.pyenv/versions/3.7.3/bin/python3.7
+#!/usr/bin/env python
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries Slack for all PAX Users and inserts User IDs/names into the AWS database for recordkeeping.
-Updates existing user records if changes have been made.
+Updates existing user records if changes have been made. Uses parameterized inputs for multiple region updates.
+
+Usage: F3SlackUserLister.py [db_name] [slack_token]
+
 '''
 
 from slacker import Slacker
 import pandas as pd
 import pymysql.cursors
 import configparser
+import sys
 
-# Configure Slack credentials
+# Configure AWS credentials
 config = configparser.ConfigParser();
-config.read('/Users/schaecher/PycharmProjects/f3Slack/credentials.ini');
-key = config['slack']['prod_key']
-
-# Configure AWS Credentials
+config.read('../config/credentials.ini');
+#key = config['slack']['prod_key']
 host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
-db = config['aws']['db']
+#db = config['aws']['db']
+db = sys.argv[1]
 
-# Set Slack tokens
+# Set Slack token
+key = sys.argv[2]
 slack = Slacker(key)
 
 #Define AWS Database connection criteria
@@ -35,7 +39,7 @@ mydb = pymysql.connect(
     charset='utf8mb4',
     cursorclass=pymysql.cursors.DictCursor)
 
-print('Looking for any new F3STL Slack Users. Stand by...')
+print('Looking for any new or updated F3 Slack Users. Stand by...')
 
 # Make users Data Frame
 users_response = slack.users.list()

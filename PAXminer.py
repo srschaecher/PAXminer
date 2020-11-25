@@ -13,20 +13,21 @@ import pytz
 import re
 import pymysql.cursors
 import configparser
+import sys
 
-# Configure Slack credentials
+# Configure AWS credentials
 config = configparser.ConfigParser();
-config.read('/Users/schaecher/PycharmProjects/f3Slack/credentials.ini');
-key = config['slack']['prod_key']
-
-# Configure AWS Credentials
+config.read('../config/credentials.ini');
+#key = config['slack']['prod_key']
 host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
-db = config['aws']['db']
+#db = config['aws']['db']
+db = sys.argv[1]
 
-# Set Slack tokens
+# Set Slack token
+key = sys.argv[2]
 slack = Slacker(key)
 
 #Define AWS Database connection criteria

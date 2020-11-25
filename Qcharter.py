@@ -1,4 +1,4 @@
-#!/Users/schaecher/.pyenv/versions/3.7.3/bin/python3.7
+#!/usr/bin/env python
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries the AWS F3(region) database for all beatdown records. It then generates bar graphs
@@ -13,20 +13,21 @@ import datetime
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import sys
 
-# Configure Slack credentials
-config = configparser.ConfigParser()
-config.read('/Users/schaecher/PycharmProjects/f3Slack/credentials.ini')
-key = config['slack']['prod_key']
-
-# Configure AWS Credentials
+# Configure AWS credentials
+config = configparser.ConfigParser();
+config.read('../config/credentials.ini');
+#key = config['slack']['prod_key']
 host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
-db = config['aws']['db']
+#db = config['aws']['db']
+db = sys.argv[1]
 
 # Set Slack tokens
+key = sys.argv[2]
 slack = Slacker(key)
 
 #Define AWS Database connection criteria
