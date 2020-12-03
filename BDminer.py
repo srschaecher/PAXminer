@@ -15,6 +15,7 @@ import pymysql.cursors
 import configparser
 import sys
 import logging
+import math
 
 # Configure AWS credentials
 config = configparser.ConfigParser();
@@ -148,20 +149,28 @@ def bd_info():
         if pax_count:
             pax_count = int(pax_count[0])
         else:
-            pax_count = 0
+            pax_count = -1
+    # Find the FNGs line
     fngline = re.findall(r'(?<=\n)\*?FNGs\*?:\*?.+?(?=\n)', str(text_tmp), re.MULTILINE)  # This is regex looking for \nFNGs: with or without an * before Q
     if fngline:
         fngline = fngline[0]
         fngs = re.sub('\*?FNGs\*?:\s?', '', str(fngline))
         fngs = fngs.strip()
     else:
-        fngs = 'NA'
+        fngs = 'None listed'
     if isinstance(pax_count, int):
         pass
     else:
         pax_count = -1
+    #Find the AO line
+    aoline = re.findall(r'(?<=\n)\*?AO\*?:\*?.+?(?=\n)', str(text_tmp),re.MULTILINE)  # This is regex looking for \nAO: with or without an *
+    if aoline:
+        ao_name = re.sub('\*?AO\*?:\s?', '', str(aoline))
+        ao_name = ao_name.strip()
+    else:
+        ao_name = 'Unknown'
     global bd_df
-    new_row = {'ao_id' : ao_tmp, 'date' : date_tmp, 'q_user_id' : qid, 'coq_user_id' : coqid, 'pax_count' : pax_count, 'backblast' : text_tmp, 'fngs' : fngs, 'user_name' : user_name, 'user_id' : user_id}
+    new_row = {'ao_id' : ao_tmp, 'date' : date_tmp, 'q_user_id' : qid, 'coq_user_id' : coqid, 'pax_count' : pax_count, 'backblast' : text_tmp, 'fngs' : fngs, 'user_name' : user_name, 'user_id' : user_id, 'ao_name' : ao_name}
     bd_df = bd_df.append(new_row, ignore_index = True)
 
 # Iterate through the new bd_df dataframe, pull out the channel_name, date, and text line from Slack. Process the text line to find the beatdown info
@@ -200,19 +209,20 @@ try:
             user_name = row['user_name']
             user_id = row['user_id']
             fngs = row['fngs']
+            ao_name = row['ao_name']
             val = (ao_id, bd_date, q_user_id, coq_user_id, pax_count, backblast, fngs)
             if bd_date > cutoff_date:
                 if q_user_id == 'NA':
                     logging.warning("Q error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, bd_date, user_name, user_id)
                     print('Backblast error on Q at AO:', ao_id, 'Date:', bd_date, 'Posted By:', user_name, ". Slack message sent to Q.")
-                    slack.chat.post_message(user_id, "Hey <" + user_name + ">! I just saw your backblast for today. There seems to be a problem, your Q line is not present or not tagged correctly. Can you fix it?")
+                    slack.chat.post_message(user_id, "Hey " + user_name + "! I just saw your backblast for " + bd_date + " at <#" + ao_id + ">. There seems to be a problem. The Q is not present or not tagged correctly. Can you fix it? How can I give credit to the Q if you don't tell me who it was? C'mon, man. Get your *$%# together, Marty! Yes, I'm an Ozark fan. The correct syntax is\n \nQ: @tag_the_q_here\n \nGot it, bub?")
                     qc = 0
                 else:
                     pass
                 if pax_count == -1:
                     logging.warning("Count error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, bd_date, user_name, user_id)
                     print('Backblast error on Count - AO:', ao_id, 'Date:', bd_date, 'Posted By:', user_name, ". Slack message sent to Q.")
-                    slack.chat.post_message(user_id, "Hey <" + user_name + ">! I just saw your backblast for " + bd_date + ". There seems to be a problem, your Count: (or Total:) line is not present or not entered correctly. I don't know how many people attended. Can you fix it?")
+                    slack.chat.post_message(user_id, "Hey " + user_name + "! I just saw your backblast for " + bd_date + " at <#" + ao_id + ">. There seems to be a problem. The Count is not present or not entered correctly. I don't know how many people attended. I wish I was that smart, but alas - I am not. Omnipresence isnt a gift software is endowed with. Can you fix it? The correct syntax is \n \nCount: XX\n \nYou can also use 'Total:'. Use digits please. Or I'll banish you to the basement office with a red stapler. \nMMMMMmmmmmkay?")
                     qc = 0
                 else:
                     pass
@@ -222,12 +232,12 @@ try:
                     if cursor.rowcount == 1:
                         print(cursor.rowcount, "records inserted.")
                         print('Date: ', bd_date)
-                        print('AO: ', ao_id)
+                        print('AO: ', ao_name)
                         print('Q: ', q_user_id)
                         print('Co-Q', coq_user_id)
                         print('Pax Count:',pax_count)
                         print('fngs:', fngs)
-                        slack.chat.post_message(q_user_id, "Hey " + user_name + "! I just captured and recorded your backblast for today. I see you had " + str(pax_count) + "PAX in attendance and FNGs were: " + str(fngs) + ". Thanks for posting your BB!")
+                        slack.chat.post_message(q_user_id, "Hey " + user_name + "! I just captured and recorded your backblast for today at <#" + ao_id + ">. I see you had " + str(math.trunc(pax_count)) + " PAX in attendance and FNGs were: " + str(fngs) + ". Thanks for posting your BB!")
                         print("Slack message sent to Q.")
                         logging.info("Backblast imported for AO: %s, Date: %s", ao_id, bd_date)
                 #Add the Q to the bd_attendance table as some Q's are forgetting to add themselves to the PAX line
