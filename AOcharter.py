@@ -18,16 +18,16 @@ import sys
 # Configure AWS credentials
 config = configparser.ConfigParser();
 config.read('../config/credentials.ini');
-#key = config['slack']['prod_key']
+key = config['slack']['prod_key']
 host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
-#db = config['aws']['db']
-db = sys.argv[1]
+db = config['aws']['db']
+#db = sys.argv[1]
 
 # Set Slack tokens
-key = sys.argv[2]
+#key = sys.argv[2]
 slack = Slacker(key)
 
 #Define AWS Database connection criteria

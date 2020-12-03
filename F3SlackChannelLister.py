@@ -67,9 +67,9 @@ try:
         sql3 = "UPDATE aos SET backblast = 0 where backblast IS NULL"
         cursor3.execute(sql3)
         mydb.commit()
-    with mydb.cursor() as cursor4:
-        sql4 = "UPDATE aos SET backblast = 1 where ao LIKE 'ao%' AND archived = 0 OR ao = 'general' OR ao = 'rucking' OR ao = 'blackops' OR ao = 'qsource' OR ao = 'f3-dads-2-point-0-saturday-beatdown'"
-        cursor4.execute(sql4)
-        mydb.commit()
+    #with mydb.cursor() as cursor4:
+    #    sql4 = "UPDATE aos SET backblast = 1 where ao LIKE 'ao%' AND archived = 0 OR ao = 'general' OR ao = 'rucking' OR ao = 'blackops' OR ao = 'qsource' OR ao = 'f3-dads-2-point-0-saturday-beatdown'"
+    #    cursor4.execute(sql4)
+    #    mydb.commit()
 finally:
     mydb.close()

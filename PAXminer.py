@@ -72,7 +72,7 @@ channels_df = channels_df.rename(columns={'id' : 'channel_id', 'name' : 'channel
 # Retrieve Channel List from AWS database (backblast = 1 denotes which channels to search for backblasts)
 try:
     with mydb.cursor() as cursor:
-        sql = "SELECT channel_id, ao FROM aos WHERE backblast = 1"
+        sql = "SELECT channel_id, ao FROM aos WHERE backblast = 1 and archived = 0"
         cursor.execute(sql)
         channels = cursor.fetchall()
         channels_df = pd.DataFrame(channels, columns={'channel_id', 'ao'})
@@ -82,6 +82,7 @@ finally:
 # Get all channel conversation
 messages_df = pd.DataFrame([]) #creates an empty dataframe to append to
 for id in channels_df['channel_id']:
+    # print("Checking channel " + id) # <-- Use this if debugging any slack channels throwing errors
     response = slack.conversations.history(id)
     messages = response.body['messages']
     temp_df = pd.json_normalize(messages)
@@ -142,6 +143,8 @@ for index, row in f3_df.iterrows():
         list_pax()
     elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
         list_pax()
+    elif re.findall('^\*Slackblast', text_tmp, re.IGNORECASE|re.MULTILINE):
+        bd_info()
 
 # Now connect to the AWS database and insert some rows!
 try:

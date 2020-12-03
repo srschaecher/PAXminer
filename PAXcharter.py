@@ -18,16 +18,16 @@ import sys
 # Configure AWS credentials
 config = configparser.ConfigParser();
 config.read('../config/credentials.ini');
-#key = config['slack']['prod_key']
+key = config['slack']['prod_key']
 host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
-#db = config['aws']['db']
-db = sys.argv[1]
+db = config['aws']['db']
+#db = sys.argv[1]
 
 # Set Slack tokens
-key = sys.argv[2]
+#key = sys.argv[2]
 slack = Slacker(key)
 
 #Define AWS Database connection criteria
@@ -57,7 +57,7 @@ for user_id in users_df['user_id']:
     try:
         attendance_tmp_df = pd.DataFrame([])  # creates an empty dataframe to append to
         with mydb.cursor() as cursor:
-            sql = "SELECT * FROM attendance_view WHERE PAX = (SELECT user_name FROM users WHERE user_id = %s) ORDER BY Date"
+            sql = "SELECT * FROM attendance_view WHERE PAX = (SELECT user_name FROM users WHERE user_id = %s) AND MONTH(Date) IN (10, 11) ORDER BY Date"
             user_id_tmp = user_id
             val = user_id_tmp
             cursor.execute(sql, val)
@@ -67,8 +67,8 @@ for user_id in users_df['user_id']:
             day = []
             year = []
             count = attendance_tmp_df.shape[0]
-            #if user_id_tmp == 'U0187M4NWG4': #Use this to send a graph to only 1 specific PAX
-            if count > 0: # This sends a graph to ALL PAX who have attended at least 1 beatdown
+            if user_id_tmp == 'U01GJ6AGAKS': #Use this to send a graph to only 1 specific PAX
+            #if count > 0: # This sends a graph to ALL PAX who have attended at least 1 beatdown
                 for Date in attendance_tmp_df['Date']:
                 #for index, row in attendance_tmp_df.iterrows():
                     datee = datetime.datetime.strptime(Date, "%Y-%m-%d")
@@ -79,15 +79,17 @@ for user_id in users_df['user_id']:
                 attendance_tmp_df['Month'] = month
                 attendance_tmp_df['Day'] = day
                 attendance_tmp_df['Year'] = year
+                attendance_tmp_df.sort_values(by=['Month'], inplace = True)
                 month_order = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-                attendance_tmp_df.groupby(['Month', 'AO']).size().unstack().plot(kind='bar', stacked=True)
+                attendance_tmp_df.groupby(['Month', 'AO']).size().unstack().sort_values(['Month'], ascending=False).plot(kind='bar', stacked=True)
                 plt.title('Number of posts from '+ pax + ' by AO/Month')
                 plt.legend(loc = 'center left', bbox_to_anchor=(1, 0.5), frameon = False)
                 plt.ioff()
                 plt.savefig('./plots/' + user_id_tmp + '.jpg', bbox_inches='tight') #save the figure to a file
                 print('Graph created for user', pax, 'Sending to Slack now... hang tight!')
-                slack.chat.post_message(user_id_tmp, 'Hello ' + pax + "! If you have received this multiple times, I am sorry, don't blame me - Beaker screwed up and didnt add the end of October correctly. It's his fault. Here is the REAL final, summary for October. Pay little attention to pre-October as those records are not complete. Lets see some more color in November! Hit up as many AOs as you can! #tasteTheRainbow")
+                slack.chat.post_message(user_id_tmp, 'Hey ' + pax + "! Here is your posting summary for November. We are still backfilling pre-October data, so that has been omitted for now. It's getting colder -  don't let that stop your progress! GET OUT OF THE FARTSACK and SYITG!")
                 slack.files.upload('./plots/' + user_id_tmp + '.jpg',channels=user_id_tmp)
+                attendance_tmp_df.hist()
                 total_graphs = total_graphs + 1
     finally:
         pass

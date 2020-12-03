@@ -14,20 +14,21 @@ import re
 import pymysql.cursors
 import configparser
 import sys
+import logging
 
 # Configure AWS credentials
 config = configparser.ConfigParser();
 config.read('../config/credentials.ini');
-#key = config['slack']['prod_key']
 host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
-#db = config['aws']['db']
-db = sys.argv[1]
+db = sys.argv[1] # Use this for the multi-region automated update
+#db = 'f3stl' # Use this for manual update
 
 # Set Slack token
-key = sys.argv[2]
+key = sys.argv[2] # Use this for the multi-region automated update
+#key = config['slack']['prod_key'] # Use this for the manual update
 slack = Slacker(key)
 
 #Define AWS Database connection criteria
@@ -44,6 +45,16 @@ mydb = pymysql.connect(
 epoch = datetime(1970, 1, 1)
 yesterday = datetime.now() - timedelta(days = 1)
 oldest = yesterday.timestamp()
+today = datetime.now()
+cutoff_date = today - timedelta(days = 14) # This tells BDminer to go back up to 14 days for message age
+cutoff_date = cutoff_date.strftime('%Y-%m-%d')
+
+# Set up logging
+logging.basicConfig(filename='./BDminer.log',
+                            filemode = 'a',
+                            datefmt = '%H:%M:%S',
+                            level = logging.DEBUG)
+logging.info("Running BDminer for " + db)
 
 # Make users Data Frame
 users_response = slack.users.list()
@@ -68,7 +79,7 @@ channels_df = channels_df.rename(columns={'id' : 'channel_id', 'name' : 'channel
 
 try:
     with mydb.cursor() as cursor:
-        sql = "SELECT channel_id, ao FROM aos WHERE backblast = 1"
+        sql = "SELECT channel_id, ao FROM aos WHERE backblast = 1 AND archived = 0"
         cursor.execute(sql)
         channels = cursor.fetchall()
         channels_df = pd.DataFrame(channels, columns={'channel_id', 'ao'})
@@ -79,6 +90,7 @@ finally:
 # Get all channel conversation
 messages_df = pd.DataFrame([]) #creates an empty dataframe to append to
 for id in channels_df['channel_id']:
+    #print("Checking channel " + id) # <-- Use this if debugging any slack channels throwing errors
     response = slack.conversations.history(id)
     messages = response.body['messages']
     temp_df = pd.json_normalize(messages)
@@ -113,7 +125,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning) #This prevents di
 
 def bd_info():
     # Find the Q information
-    qline = re.findall(r'(?<=\n)\*?Q\*?:.+?(?=\n)', str(text_tmp), re.MULTILINE) #This is regex looking for \nQ: with or without an * before Q
+    qline = re.findall(r'(?<=\n)\*?V?Qs?\*?:.+?(?=\n)', str(text_tmp), re.MULTILINE) #This is regex looking for \nQ: with or without an * before Q
     qids = re.findall(pat, str(qline), re.MULTILINE)
     qids = [re.sub(r'@', '', i) for i in qids]
     if qids:
@@ -125,7 +137,7 @@ def bd_info():
     else:
         coqid = 'NA'
     # Find the PAX Count line (if the Q put one in the BB)
-    pax_count = re.search(r'(?<=\n)\*?(?i)Count\*?:\*?.+?(?=\n)', str(text_tmp))
+    pax_count = re.search(r'(?<=\n)\*?(?i)Count\*?:\*?.+?(?:$|\n)', str(text_tmp))
     if pax_count:
         pass
     else:
@@ -149,7 +161,7 @@ def bd_info():
     else:
         pax_count = -1
     global bd_df
-    new_row = {'ao_id' : ao_tmp, 'date' : date_tmp, 'q_user_id' : qid, 'coq_user_id' : coqid, 'pax_count' : pax_count, 'backblast' : text_tmp, 'fngs' : fngs}
+    new_row = {'ao_id' : ao_tmp, 'date' : date_tmp, 'q_user_id' : qid, 'coq_user_id' : coqid, 'pax_count' : pax_count, 'backblast' : text_tmp, 'fngs' : fngs, 'user_name' : user_name, 'user_id' : user_id}
     bd_df = bd_df.append(new_row, ignore_index = True)
 
 # Iterate through the new bd_df dataframe, pull out the channel_name, date, and text line from Slack. Process the text line to find the beatdown info
@@ -157,20 +169,27 @@ for index, row in f3_df.iterrows():
     ao_tmp = row['channel_id']
     date_tmp = row['date']
     text_tmp = row['text']
+    user_name = row['user_name']
+    user_id = row['user_id']
     text_tmp = re.sub('\*', '', text_tmp, re.MULTILINE)
-    if re.findall('^Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        bd_info()
-    elif re.findall('^Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        bd_info()
-    elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        bd_info()
-    elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        bd_info()
+    if db != 'f3meca':
+        if re.findall('^Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
+            bd_info()
+        elif re.findall('^Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
+            bd_info()
+        elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
+            bd_info()
+        elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
+            bd_info()
+    elif db == 'f3meca':
+        if re.findall('^\*Slackblast', text_tmp, re.IGNORECASE|re.MULTILINE):
+            bd_info()
     text_tmp = re.sub('\*', '', text_tmp, re.MULTILINE)
 # Now connect to the AWS database and insert some rows!
 try:
     with mydb.cursor() as cursor:
         for index, row in bd_df.iterrows():
+            qc = 1
             sql = "INSERT IGNORE into beatdowns (ao_id, bd_date, q_user_id, coq_user_id, pax_count, backblast, fngs) VALUES (%s, %s, %s, %s, %s, %s, %s)"
             ao_id = row['ao_id']
             bd_date = row['date']
@@ -178,36 +197,52 @@ try:
             coq_user_id = row['coq_user_id']
             pax_count = row['pax_count']
             backblast = row['backblast']
+            user_name = row['user_name']
+            user_id = row['user_id']
             fngs = row['fngs']
             val = (ao_id, bd_date, q_user_id, coq_user_id, pax_count, backblast, fngs)
-            cursor.execute(sql, val)
-            mydb.commit()
-            if cursor.rowcount == 1:
-                print(cursor.rowcount, "records inserted.")
-                print('Date: ', bd_date)
-                print('AO: ', ao_id)
-                print('Q: ', q_user_id)
-                print('Co-Q', coq_user_id)
-                print('Pax Count:',pax_count)
-                print('fngs:', fngs)
-                print('--------end--------')
-            #Add the Q to the bd_attendance table as some Q's are forgetting to add themselves to the PAX line
-            if q_user_id == 'NA':
-                pass
-            else:
-                sql2 = "INSERT IGNORE into bd_attendance (user_id, ao_id, date) VALUES (%s, %s, %s)"
-                user_id = row['q_user_id']
-                ao_id = row['ao_id']
-                date = row['date']
-                val2 = (user_id, ao_id, date)
-                cursor.execute(sql2, val2)
-                mydb.commit()
-                if cursor.rowcount == 1:
-                    print(cursor.rowcount, "records inserted.")
-                    print('PAX: ', user_id)
-                    print('AO: ', ao_id)
-                    print('Date: ', date)
-                    print('--------end--------')
+            if bd_date > cutoff_date:
+                if q_user_id == 'NA':
+                    logging.warning("Q error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, bd_date, user_name, user_id)
+                    print('Backblast error on Q at AO:', ao_id, 'Date:', bd_date, 'Posted By:', user_name, ". Slack message sent to Q.")
+                    slack.chat.post_message(user_id, "Hey <" + user_name + ">! I just saw your backblast for today. There seems to be a problem, your Q line is not present or not tagged correctly. Can you fix it?")
+                    qc = 0
+                else:
+                    pass
+                if pax_count == -1:
+                    logging.warning("Count error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, bd_date, user_name, user_id)
+                    print('Backblast error on Count - AO:', ao_id, 'Date:', bd_date, 'Posted By:', user_name, ". Slack message sent to Q.")
+                    slack.chat.post_message(user_id, "Hey <" + user_name + ">! I just saw your backblast for " + bd_date + ". There seems to be a problem, your Count: (or Total:) line is not present or not entered correctly. I don't know how many people attended. Can you fix it?")
+                    qc = 0
+                else:
+                    pass
+                if qc == 1:
+                    cursor.execute(sql, val)
+                    mydb.commit()
+                    if cursor.rowcount == 1:
+                        print(cursor.rowcount, "records inserted.")
+                        print('Date: ', bd_date)
+                        print('AO: ', ao_id)
+                        print('Q: ', q_user_id)
+                        print('Co-Q', coq_user_id)
+                        print('Pax Count:',pax_count)
+                        print('fngs:', fngs)
+                        slack.chat.post_message(q_user_id, "Hey " + user_name + "! I just captured and recorded your backblast for today. I see you had " + str(pax_count) + "PAX in attendance and FNGs were: " + str(fngs) + ". Thanks for posting your BB!")
+                        print("Slack message sent to Q.")
+                        logging.info("Backblast imported for AO: %s, Date: %s", ao_id, bd_date)
+                #Add the Q to the bd_attendance table as some Q's are forgetting to add themselves to the PAX line
+                if q_user_id == 'NA':
+                    pass
+                else:
+                    sql2 = "INSERT IGNORE into bd_attendance (user_id, ao_id, date) VALUES (%s, %s, %s)"
+                    user_id = row['q_user_id']
+                    ao_id = row['ao_id']
+                    date = row['date']
+                    val2 = (user_id, ao_id, date)
+                    cursor.execute(sql2, val2)
+                    mydb.commit()
+                    if cursor.rowcount == 1:
+                        print(cursor.rowcount, "Q's attendance at beatdown recorded.")
         sql3 = "UPDATE beatdowns SET coq_user_id=NULL where coq_user_id = 'NA'"
         cursor.execute(sql3)
         mydb.commit()
