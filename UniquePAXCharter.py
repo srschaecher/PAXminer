@@ -29,7 +29,6 @@ db = 'f3meca' # Set this for a specific region
 region = 'MeCa'
 
 # Set Slack token
-key = 'xoxb-128395560468-1531697766212-QrK33Vyt3cv4HQgaBAF1pPqp' # Set this for a specific region
 #key = sys.argv[2]
 slack = Slacker(key)
 
