@@ -181,18 +181,18 @@ for index, row in f3_df.iterrows():
     user_name = row['user_name']
     user_id = row['user_id']
     text_tmp = re.sub('\*', '', text_tmp, re.MULTILINE)
-    if db != 'f3meca':
-        if re.findall('^Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-            bd_info()
-        elif re.findall('^Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
-            bd_info()
-        elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-            bd_info()
-        elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
-            bd_info()
-    elif db == 'f3meca':
-        if re.findall('^\*Slackblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-            bd_info()
+    if re.findall('^Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
+        bd_info()
+    elif re.findall('^Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
+        bd_info()
+    elif re.findall('^Slackblast.', text_tmp, re.IGNORECASE|re.MULTILINE):
+        bd_info()
+    elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
+        bd_info()
+    elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
+        bd_info()
+    elif re.findall('\*Slackblast', text_tmp, re.IGNORECASE|re.MULTILINE):
+        bd_info()
     text_tmp = re.sub('\*', '', text_tmp, re.MULTILINE)
 # Now connect to the AWS database and insert some rows!
 try:
