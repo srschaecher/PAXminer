@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries Slack for User, Channel, and Conversation (channel) history and then parses all conversations to find Backblasts.
@@ -8,6 +8,7 @@ All Backblasts are then parsed to collect the BEATDOWN information for any given
 import warnings
 from slacker import Slacker
 from datetime import datetime, timedelta
+import dateparser
 import pandas as pd
 import pytz
 import re
@@ -47,14 +48,15 @@ epoch = datetime(1970, 1, 1)
 yesterday = datetime.now() - timedelta(days = 1)
 oldest = yesterday.timestamp()
 today = datetime.now()
-cutoff_date = today - timedelta(days = 14) # This tells BDminer to go back up to 14 days for message age
+cutoff_date = today - timedelta(days = 14) # This tells BDminer to go back up to N days for message age
 cutoff_date = cutoff_date.strftime('%Y-%m-%d')
 
 # Set up logging
-logging.basicConfig(filename='./BDminer.log',
+logging.basicConfig(filename='./logs/BDminer.log',
                             filemode = 'a',
-                            datefmt = '%H:%M:%S',
-                            level = logging.DEBUG)
+                            format='%(asctime)s %(levelname)-8s %(message)s',
+                            datefmt = '%Y-%m-%d %H:%M:%S',
+                            level = logging.INFO)
 logging.info("Running BDminer for " + db)
 
 # Make users Data Frame
@@ -69,15 +71,6 @@ for index, row in users_df.iterrows():
     if un_tmp == "" :
         row['user_name'] = rn_tmp
 
-'''
-# Get channel list from Slack (note - this has been replaced with a channel list from the AWS database)
-channels_response = slack.conversations.list()
-channels = channels_response.body['channels']
-channels_df = pd.json_normalize(channels)
-channels_df = channels_df[['id', 'name', 'created', 'is_archived']]
-channels_df = channels_df.rename(columns={'id' : 'channel_id', 'name' : 'channel_name', 'created' : 'channel_created', 'is_archived' : 'archived'})
-'''
-
 try:
     with mydb.cursor() as cursor:
         sql = "SELECT channel_id, ao FROM aos WHERE backblast = 1 AND archived = 0"
@@ -86,30 +79,33 @@ try:
         channels_df = pd.DataFrame(channels, columns={'channel_id', 'ao'})
 finally:
     print('Looking for new Beatdowns from the Slack Backblast posts! Stand by...')
-#    mydb.close()
 
 # Get all channel conversation
 messages_df = pd.DataFrame([]) #creates an empty dataframe to append to
 for id in channels_df['channel_id']:
-    #print("Checking channel " + id) # <-- Use this if debugging any slack channels throwing errors
-    response = slack.conversations.history(id)
-    messages = response.body['messages']
-    temp_df = pd.json_normalize(messages)
-    temp_df = temp_df[['user', 'type', 'text', 'ts']]
-    temp_df = temp_df.rename(columns={'user' : 'user_id', 'type' : 'message_type', 'ts' : 'timestamp'})
-    temp_df["channel_id"] = id
-    messages_df = messages_df.append(temp_df, ignore_index=True)
+    try:
+        #print("Checking channel " + id) # <-- Use this if debugging any slack channels throwing errors
+        response = slack.conversations.history(id)
+        messages = response.body['messages']
+        temp_df = pd.json_normalize(messages)
+        temp_df = temp_df[['user', 'type', 'text', 'ts']]
+        temp_df = temp_df.rename(columns={'user' : 'user_id', 'type' : 'message_type', 'ts' : 'timestamp'})
+        temp_df["channel_id"] = id
+        messages_df = messages_df.append(temp_df, ignore_index=True)
+    except:
+        print("Error: Unable to access Slack channel:", id, "in region:", db)
+        logging.warning("Error: Unable to access Slack channel %s in region %s", id, db)
 
 # Calculate Date and Time columns
 msg_date = []
 msg_time = []
 for ts in messages_df['timestamp']:
         seconds_since_epoch = float(ts)
-        datetime = epoch + timedelta(seconds=seconds_since_epoch)
-        datetime = datetime.replace(tzinfo=pytz.utc)
-        datetime = datetime.astimezone(pytz.timezone('America/Chicago'))
-        msg_date.append(datetime.strftime('%Y-%m-%d'))
-        msg_time.append(datetime.strftime('%H:%M:%S'))
+        dt = epoch + timedelta(seconds=seconds_since_epoch)
+        dt = dt.replace(tzinfo=pytz.utc)
+        dt = dt.astimezone(pytz.timezone('America/Chicago'))
+        msg_date.append(dt.strftime('%Y-%m-%d'))
+        msg_time.append(dt.strftime('%H:%M:%S'))
 messages_df['date'] = msg_date
 messages_df['time'] = msg_time
 
@@ -150,6 +146,10 @@ def bd_info():
             pax_count = int(pax_count[0])
         else:
             pax_count = -1
+    if isinstance(pax_count, int):
+        pass
+    else:
+        pax_count = -1
     # Find the FNGs line
     fngline = re.findall(r'(?<=\n)\*?FNGs\*?:\*?.+?(?=\n)', str(text_tmp), re.MULTILINE)  # This is regex looking for \nFNGs: with or without an * before Q
     if fngline:
@@ -158,10 +158,22 @@ def bd_info():
         fngs = fngs.strip()
     else:
         fngs = 'None listed'
-    if isinstance(pax_count, int):
-        pass
+    #Find the Date:
+    dateline = re.findall(r'(?<=\n)Date:.+?(?=\n)', str(text_tmp), re.IGNORECASE)
+    if dateline:
+        dateline = re.sub('xa0', ' ', str(dateline), flags=re.I)
+        #print("First dateline: " + dateline)
+        dateline = re.sub("Date:\s?", '', str(dateline), flags=re.I)
+        #print("Removed Date: " + dateline)
+        dateline = dateparser.parse(dateline) #dateparser is a flexible date module that can understand many different date formats
+        #print("Parsed:")
+        #print(dateline)
+        if dateline is None:
+            date_tmp = '2099-12-31' #sets a date many years in the future just to catch this error later (needs to be a future date)
+        else:
+            date_tmp = str(datetime.strftime(dateline, '%Y-%m-%d'))
     else:
-        pax_count = -1
+        date_tmp = msg_date
     #Find the AO line
     aoline = re.findall(r'(?<=\n)\*?AO\*?:\*?.+?(?=\n)', str(text_tmp),re.MULTILINE)  # This is regex looking for \nAO: with or without an *
     if aoline:
@@ -170,29 +182,35 @@ def bd_info():
     else:
         ao_name = 'Unknown'
     global bd_df
-    new_row = {'ao_id' : ao_tmp, 'date' : date_tmp, 'q_user_id' : qid, 'coq_user_id' : coqid, 'pax_count' : pax_count, 'backblast' : text_tmp, 'fngs' : fngs, 'user_name' : user_name, 'user_id' : user_id, 'ao_name' : ao_name}
+    new_row = {'msg_date' : msg_date, 'ao_id' : ao_tmp, 'bd_date' : date_tmp, 'q_user_id' : qid, 'coq_user_id' : coqid, 'pax_count' : pax_count, 'backblast' : text_tmp, 'fngs' : fngs, 'user_name' : user_name, 'user_id' : user_id, 'ao_name' : ao_name}
     bd_df = bd_df.append(new_row, ignore_index = True)
 
 # Iterate through the new bd_df dataframe, pull out the channel_name, date, and text line from Slack. Process the text line to find the beatdown info
 for index, row in f3_df.iterrows():
     ao_tmp = row['channel_id']
-    date_tmp = row['date']
+    msg_date = row['date']
     text_tmp = row['text']
+    text_tmp = re.sub('_\\xa0', ' ', str(text_tmp))
+    text_tmp = re.sub('\\xa0', ' ', str(text_tmp))
+    text_tmp = re.sub('_\*', '', str(text_tmp))
+    text_tmp = re.sub('\*_', '', str(text_tmp))
+    text_tmp = re.sub('\*', '', str(text_tmp))
     user_name = row['user_name']
     user_id = row['user_id']
-    text_tmp = re.sub('\*', '', text_tmp, re.MULTILINE)
-    if re.findall('^Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        bd_info()
-    elif re.findall('^Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        bd_info()
-    elif re.findall('^Slackblast.', text_tmp, re.IGNORECASE|re.MULTILINE):
-        bd_info()
-    elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        bd_info()
-    elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        bd_info()
-    elif re.findall('\*Slackblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        bd_info()
+    if db == 'f3meca':
+        if re.findall('^Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^\*Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+    elif db != 'f3meca':
+        if re.findall('^Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^Back blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
     text_tmp = re.sub('\*', '', text_tmp, re.MULTILINE)
 # Now connect to the AWS database and insert some rows!
 try:
@@ -201,7 +219,8 @@ try:
             qc = 1
             sql = "INSERT IGNORE into beatdowns (ao_id, bd_date, q_user_id, coq_user_id, pax_count, backblast, fngs) VALUES (%s, %s, %s, %s, %s, %s, %s)"
             ao_id = row['ao_id']
-            bd_date = row['date']
+            msg_date = row['msg_date']
+            bd_date = row['bd_date']
             q_user_id = row['q_user_id']
             coq_user_id = row['coq_user_id']
             pax_count = row['pax_count']
@@ -211,51 +230,62 @@ try:
             fngs = row['fngs']
             ao_name = row['ao_name']
             val = (ao_id, bd_date, q_user_id, coq_user_id, pax_count, backblast, fngs)
-            if bd_date > cutoff_date:
+            if msg_date > cutoff_date:
                 if q_user_id == 'NA':
-                    logging.warning("Q error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, bd_date, user_name, user_id)
-                    print('Backblast error on Q at AO:', ao_id, 'Date:', bd_date, 'Posted By:', user_name, ". Slack message sent to Q.")
-                    slack.chat.post_message(user_id, "Hey " + user_name + "! I just saw your backblast for " + bd_date + " at <#" + ao_id + ">. There seems to be a problem. The Q is not present or not tagged correctly. Can you fix it? How can I give credit to the Q if you don't tell me who it was? C'mon, man. Get your *$%# together, Marty! Yes, I'm an Ozark fan. The correct syntax is\n \nQ: @tag_the_q_here\n \nGot it, bub?")
+                    logging.warning("Q error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, msg_date, user_name, user_id)
+                    print('Backblast error on Q at AO:', ao_id, 'Date:', msg_date, 'Posted By:', user_name, ". Slack message sent to Q. bd: ", bd_date, "cutoff:", cutoff_date)
+                    slack.chat.post_message(user_id, "Hey " + user_name + "! I just saw your backblast posted on " + msg_date + " at <#" + ao_id + ">. There seems to be a problem. The Q is not present or not tagged correctly. Can you fix it? The correct syntax is\n \nQ: @tag_the_q_here\n \nThanks!")
                     qc = 0
                 else:
                     pass
                 if pax_count == -1:
-                    logging.warning("Count error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, bd_date, user_name, user_id)
-                    print('Backblast error on Count - AO:', ao_id, 'Date:', bd_date, 'Posted By:', user_name, ". Slack message sent to Q.")
-                    slack.chat.post_message(user_id, "Hey " + user_name + "! I just saw your backblast for " + bd_date + " at <#" + ao_id + ">. There seems to be a problem. The Count is not present or not entered correctly. I don't know how many people attended. I wish I was that smart, but alas - I am not. Omnipresence isnt a gift software is endowed with. Can you fix it? The correct syntax is \n \nCount: XX\n \nYou can also use 'Total:'. Use digits please. Or I'll banish you to the basement office with a red stapler. \nMMMMMmmmmmkay?")
+                    logging.warning("Count error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, msg_date, user_name, user_id)
+                    print('Backblast error on Count - AO:', ao_id, 'Date:', msg_date, 'Posted By:', user_name, ". Slack message sent to Q.")
+                    slack.chat.post_message(user_id, "Hey " + user_name + "! I just saw your backblast posted on " + msg_date + " at <#" + ao_id + ">. There seems to be a problem. The Count is not present or not entered correctly. Can you fix it? The correct syntax is \n \nCount: XX (You can also use 'Total:'). Use digits please. \n\nThanks!")
                     qc = 0
                 else:
                     pass
+                if bd_date == '2099-12-31':
+                    logging.warning("Date error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, msg_date, user_name, user_id)
+                    print('Backblast error on Date - AO:', ao_id, 'Date:', msg_date, 'Posted By:', user_name,". Slack message sent to Q. bd: ", bd_date, "cutoff:", cutoff_date)
+                    slack.chat.post_message(user_id, "Hey " + user_name + "! I just saw your backblast posted on " + msg_date + " at <#" + ao_id + ">. There seems to be a problem. The Date is not entered correctly. Can you fix it? I can understand most common date formats like: \n \nDate: 12-25-2020\nDate: 2020-12-25\nDate: 12/25/20\nDate: December 25, 2020\nAnd even more... which means you must have used something really weird.\n\nThanks!")
+                    qc = 0
                 if qc == 1:
                     cursor.execute(sql, val)
                     mydb.commit()
                     if cursor.rowcount == 1:
                         print(cursor.rowcount, "records inserted.")
-                        print('Date: ', bd_date)
-                        print('AO: ', ao_name)
-                        print('Q: ', q_user_id)
+                        print('Beatdown Date:', bd_date)
+                        print('Message Posting Date:', msg_date)
+                        print('AO:', ao_name)
+                        print('Q:', q_user_id)
                         print('Co-Q', coq_user_id)
                         print('Pax Count:',pax_count)
                         print('fngs:', fngs)
-                        slack.chat.post_message(q_user_id, "Hey " + user_name + "! I just captured and recorded your backblast for today at <#" + ao_id + ">. I see you had " + str(math.trunc(pax_count)) + " PAX in attendance and FNGs were: " + str(fngs) + ". Thanks for posting your BB!")
+                        slack.chat.post_message(user_id, "Hey " + user_name + "! I just captured and recorded your backblast for " + bd_date + " at <#" + ao_id + ">. I see you had " + str(math.trunc(pax_count)) + " PAX in attendance and FNGs were: " + str(fngs) + ". Thanks for posting your BB!")
                         print("Slack message sent to Q.")
                         logging.info("Backblast imported for AO: %s, Date: %s", ao_id, bd_date)
                 #Add the Q to the bd_attendance table as some Q's are forgetting to add themselves to the PAX line
-                if q_user_id == 'NA':
-                    pass
-                else:
-                    sql2 = "INSERT IGNORE into bd_attendance (user_id, ao_id, date) VALUES (%s, %s, %s)"
-                    user_id = row['q_user_id']
-                    ao_id = row['ao_id']
-                    date = row['date']
-                    val2 = (user_id, ao_id, date)
-                    cursor.execute(sql2, val2)
-                    mydb.commit()
-                    if cursor.rowcount == 1:
-                        print(cursor.rowcount, "Q's attendance at beatdown recorded.")
+                if qc == 1:
+                    if q_user_id == 'NA':
+                        pass
+                    else:
+                        sql2 = "INSERT IGNORE into bd_attendance (user_id, ao_id, date) VALUES (%s, %s, %s)"
+                        user_id = row['q_user_id']
+                        ao_id = row['ao_id']
+                        date = row['bd_date']
+                        val2 = (user_id, ao_id, date)
+                        cursor.execute(sql2, val2)
+                        mydb.commit()
+                        if cursor.rowcount == 1:
+                            print(cursor.rowcount, "Q's attendance at beatdown recorded.")
+            else:
+                pass
+
         sql3 = "UPDATE beatdowns SET coq_user_id=NULL where coq_user_id = 'NA'"
         cursor.execute(sql3)
         mydb.commit()
 finally:
     mydb.close()
 print('Finished. Beatdowns are up to date.')
+logging.info("BDminer execution complete for region " + db)

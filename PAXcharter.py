@@ -18,16 +18,16 @@ import sys
 # Configure AWS credentials
 config = configparser.ConfigParser();
 config.read('../config/credentials.ini');
-key = config['slack']['prod_key']
 host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
-db = config['aws']['db']
-#db = sys.argv[1]
+#db = config['aws']['db']
+db = sys.argv[1]
 
-# Set Slack tokens
-#key = sys.argv[2]
+# Set Slack token
+key = sys.argv[2]
+#key = config['slack']['prod_key']
 slack = Slacker(key)
 
 #Define AWS Database connection criteria
@@ -40,7 +40,7 @@ mydb = pymysql.connect(
     charset='utf8mb4',
     cursorclass=pymysql.cursors.DictCursor)
 
-print('Looking for all F3STL Slack Users. Stand by...')
+print('Looking for all Slack Users for ' + db + '. Stand by...')
 # Make users Data Frame
 users_response = slack.users.list()
 users = users_response.body['members']
@@ -87,7 +87,7 @@ for user_id in users_df['user_id']:
                 plt.ioff()
                 plt.savefig('./plots/' + user_id_tmp + '.jpg', bbox_inches='tight') #save the figure to a file
                 print('Graph created for user', pax, 'Sending to Slack now... hang tight!')
-                slack.chat.post_message(user_id_tmp, 'Hey ' + pax + "! Here is your posting summary for November. We are still backfilling pre-October data, so that has been omitted for now. It's getting colder -  don't let that stop your progress! GET OUT OF THE FARTSACK and SYITG!")
+                slack.chat.post_message(user_id_tmp, 'Hey ' + pax + "! Here is your posting summary for December. Lets make 2021 even better - SYITG!")
                 slack.files.upload('./plots/' + user_id_tmp + '.jpg',channels=user_id_tmp)
                 attendance_tmp_df.hist()
                 total_graphs = total_graphs + 1

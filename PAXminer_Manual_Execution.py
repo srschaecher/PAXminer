@@ -10,11 +10,6 @@ import pymysql.cursors
 import configparser
 import os
 
-# Set the working directory to the directory of the script
-abspath = os.path.abspath(__file__)
-dname = os.path.dirname(abspath)
-os.chdir(dname)
-
 # Configure AWS credentials
 config = configparser.ConfigParser();
 config.read('../config/credentials.ini');
@@ -40,7 +35,7 @@ mydb1 = pymysql.connect(
 # Get list of regions and Slack tokens for PAXminer execution
 try:
     with mydb1.cursor() as cursor:
-        sql = "SELECT * FROM paxminer.regions"
+        sql = "SELECT * FROM paxminer.regions where region = 'STL'" # <-- Update this for whatever region is being tested
         cursor.execute(sql)
         regions = cursor.fetchall()
         regions_df = pd.DataFrame(regions, columns={'region', 'slack_token', 'schema_name'})
@@ -52,8 +47,9 @@ for index, row in regions_df.iterrows():
     key = row['slack_token']
     db = row['schema_name']
     print('Executing user updates for region ' + region)
-    os.system("./F3SlackUserLister.py " + db + " " + key)
-    os.system("./F3SlackChannelLister.py " + db + " " + key)
+    #os.system("./F3SlackUserLister.py " + db + " " + key)
+    #os.system("./F3SlackChannelLister.py " + db + " " + key)
     os.system("./BDminer.py " + db + " " + key)
     os.system("./PAXminer.py " + db + " " + key)
     print('----------------- End of Region Update -----------------\n')
+print('\nPAXminer execution complete.')

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries Slack for User, Channel, and Conversation (channel) history and then parses all conversations to find Backblasts.
@@ -14,11 +14,12 @@ import re
 import pymysql.cursors
 import configparser
 import sys
+import logging
+import dateparser
 
 # Configure AWS credentials
 config = configparser.ConfigParser();
 config.read('../config/credentials.ini');
-#key = config['slack']['prod_key']
 host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
@@ -28,6 +29,7 @@ db = sys.argv[1]
 
 # Set Slack token
 key = sys.argv[2]
+#key = config['slack']['prod_key']
 slack = Slacker(key)
 
 #Define AWS Database connection criteria
@@ -44,6 +46,14 @@ mydb = pymysql.connect(
 epoch = datetime(1970, 1, 1)
 yesterday = datetime.now() - timedelta(days = 1)
 oldest = yesterday.timestamp()
+
+# Set up logging
+logging.basicConfig(filename='./logs/PAXminer.log',
+                            filemode = 'a',
+                            format='%(asctime)s %(levelname)-8s %(message)s',
+                            datefmt = '%Y-%m-%d %H:%M:%S',
+                            level = logging.INFO)
+logging.info("Running PAXminer for " + db)
 
 # Send a message to #general channel to make sure script is working :)
 #slack.chat.post_message('#general', 'Don't mind me, I'm debugging PAXminer again!')
@@ -80,34 +90,37 @@ finally:
     print('Finding all PAX that attended recent workouts - stand by.')
 
 # Get all channel conversation
-messages_df = pd.DataFrame([]) #creates an empty dataframe to append to
+messages_df = pd.DataFrame([]) # creates an empty dataframe to append to
 for id in channels_df['channel_id']:
-    # print("Checking channel " + id) # <-- Use this if debugging any slack channels throwing errors
-    response = slack.conversations.history(id)
-    messages = response.body['messages']
-    temp_df = pd.json_normalize(messages)
-    temp_df = temp_df[['user', 'type', 'text', 'ts']]
-    temp_df = temp_df.rename(columns={'user' : 'user_id', 'type' : 'message_type', 'ts' : 'timestamp'})
-    temp_df["channel_id"] = id
-    messages_df = messages_df.append(temp_df, ignore_index=True)
-
+    try:
+        # print("Checking channel " + id) # <-- Use this if debugging any slack channels throwing errors
+        response = slack.conversations.history(id)
+        messages = response.body['messages']
+        temp_df = pd.json_normalize(messages)
+        temp_df = temp_df[['user', 'type', 'text', 'ts']]
+        temp_df = temp_df.rename(columns={'user' : 'user_id', 'type' : 'message_type', 'ts' : 'timestamp'})
+        temp_df["channel_id"] = id
+        messages_df = messages_df.append(temp_df, ignore_index=True)
+    except:
+        print("Error: Unable to access Slack channel:", id, "in region:",db)
+        logging.warning("Error: Unable to access Slack channel %s in region %s", id, db)
 # Calculate Date and Time columns
 msg_date = []
 msg_time = []
 for ts in messages_df['timestamp']:
         seconds_since_epoch = float(ts)
-        datetime = epoch + timedelta(seconds=seconds_since_epoch)
-        datetime = datetime.replace(tzinfo=pytz.utc)
-        datetime = datetime.astimezone(pytz.timezone('America/Chicago'))
-        msg_date.append(datetime.strftime('%Y-%m-%d'))
-        msg_time.append(datetime.strftime('%H:%M:%S'))
-messages_df['date'] = msg_date
+        dt = epoch + timedelta(seconds=seconds_since_epoch)
+        dt = dt.replace(tzinfo=pytz.utc)
+        dt = dt.astimezone(pytz.timezone('America/Chicago'))
+        msg_date.append(dt.strftime('%Y-%m-%d'))
+        msg_time.append(dt.strftime('%H:%M:%S'))
+messages_df['msg_date'] = msg_date
 messages_df['time'] = msg_time
 
 # Merge the data frames into 1 joined DF
 f3_df = pd.merge(messages_df, users_df)
 f3_df = pd.merge(f3_df,channels_df)
-f3_df = f3_df[['timestamp', 'date', 'time', 'channel_id', 'ao', 'user_id', 'user_name', 'real_name', 'text']]
+f3_df = f3_df[['timestamp', 'msg_date', 'time', 'channel_id', 'ao', 'user_id', 'user_name', 'real_name', 'text']]
 
 # Now find only backblast messages (either "Backblast" or "Back Blast") - note .casefold() denotes case insensitivity - and pull out the PAX user ID's identified within
 # This pattern finds username links followed by commas: pat = r'(?<=\\xa0).+?(?=,)'
@@ -127,14 +140,35 @@ def list_pax():
         df = pd.DataFrame(pax)
         df.columns =['user_id']
         df['ao'] = ao_tmp
-        df['date'] = date_tmp
+        # Find the Date:
+        dateline = re.findall(r'(?<=\n)Date:.+?(?=\n)', str(text_tmp), re.IGNORECASE)
+        msg_date = row['msg_date']
+        if dateline:
+            # print("First dateline: " + dateline)
+            dateline = re.sub("Date:\s?", '', str(dateline), flags=re.I)
+            # print("Removed Date: " + dateline)
+            dateline = dateparser.parse(
+                dateline)  # dateparser is a flexible date module that can understand many different date formats
+            # print("Parsed:")
+            # print(dateline)
+            if dateline is None:
+                date_tmp = '2099-12-31'  # sets a date many years in the future just to catch this error later (needs to be a future date)
+            else:
+                date_tmp = str(datetime.strftime(dateline, '%Y-%m-%d'))
+        else:
+            date_tmp = msg_date
+        df['bd_date'] = date_tmp
+        df['msg_date'] = msg_date
         pax_attendance_df = pax_attendance_df.append(df)
-
 # Iterate through the new f3_df dataframe, pull out the channel_name, date, and text line from Slack. Process the text line to find the Pax list
 for index, row in f3_df.iterrows():
     ao_tmp = row['channel_id']
-    date_tmp = row['date']
     text_tmp = row['text']
+    text_tmp = re.sub('_\\xa0', ' ', str(text_tmp))
+    text_tmp = re.sub('\\xa0', ' ', str(text_tmp))
+    text_tmp = re.sub('_\*', '', str(text_tmp))
+    text_tmp = re.sub('\*_', '', str(text_tmp))
+    text_tmp = re.sub('\*', '', str(text_tmp))
     if re.findall('^Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
         list_pax()
     elif re.findall('^Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
@@ -149,19 +183,24 @@ for index, row in f3_df.iterrows():
         list_pax()
 
 # Now connect to the AWS database and insert some rows!
+inserts = 0
 try:
     with mydb.cursor() as cursor:
         for index, row in pax_attendance_df.iterrows():
             sql = "INSERT IGNORE INTO bd_attendance (user_id, ao_id, date) VALUES (%s, %s, %s)"
             user_id_tmp = row['user_id']
             ao_tmp = row['ao']
-            date_tmp = row['date']
+            date_tmp = row['bd_date']
             val = (user_id_tmp, ao_tmp, date_tmp)
-            cursor.execute(sql, val)
-            mydb.commit()
-            if cursor.rowcount > 0:
-                print(cursor.rowcount, "record inserted for", user_id_tmp, "at", ao_tmp, "on", date_tmp)
-
+            if date_tmp == '2099-12-31':
+                print('Backblast error on Date - AO:', ao_tmp, 'Date:', date_tmp, 'Posted By:', user_id_tmp)
+            else:
+                cursor.execute(sql, val)
+                mydb.commit()
+                if cursor.rowcount > 0:
+                    print(cursor.rowcount, "record inserted for", user_id_tmp, "at", ao_tmp, "on", date_tmp)
+                    inserts = inserts + 1
 finally:
     mydb.close()
+logging.info("PAXminer complete: Inserted %s new PAX attendance records for region %s", inserts, db)
 print('Finished. You may go back to your day!')
