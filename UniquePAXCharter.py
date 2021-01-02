@@ -14,23 +14,22 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import configparser
+import sys
 
 # Configure AWS credentials
 config = configparser.ConfigParser();
 config.read('../config/credentials.ini');
-#key = config['slack']['prod_key']
 host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
 #db = config['aws']['db']
-#db = sys.argv[1]
-db = 'f3kc' # Set this for a specific region
-region = 'KC'
+db = sys.argv[1]
+region = sys.argv[3]
 
 # Set Slack token
-#key = sys.argv[2]
-key = 'xoxb-532986085797-1522344030132-OcU9uqTFXkGXqyqeclz5Wpsz'
+key = sys.argv[2]
+#key = config['slack']['prod_key']
 slack = Slacker(key)
 
 #Define AWS Database connection criteria
@@ -57,10 +56,10 @@ try:
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
         #plt.show()
         plt.ioff()
-        plt.savefig('./plots/' + region + '/PAX_Counts_By_AO.jpg', bbox_inches='tight')  # save the figure to a file
+        plt.savefig('./plots/' + db + '/PAX_Counts_By_AO.jpg', bbox_inches='tight')  # save the figure to a file
         print('Graph created for unique PAX across all AOs. Sending to Slack now... hang tight!')
-        slack.chat.post_message('U019BCPMD9T', "Hello " + region + "! Here is a quick look at how many UNIQUE PAX attended beatdowns by AO by Month!")
-        slack.files.upload('./plots/' + region + '/PAX_Counts_By_AO.jpg', channels='U019BCPMD9T')
+        slack.chat.post_message('U40HBU8BB', "Hello " + region + "! Here is a quick look at how many UNIQUE PAX attended beatdowns by AO by Month!")
+        slack.files.upload('./plots/' + db + '/PAX_Counts_By_AO.jpg', channels='U40HBU8BB')
         total_graphs = total_graphs + 1
 finally:
     print('Total graphs made:', total_graphs)
