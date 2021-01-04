@@ -70,6 +70,7 @@ Don't worry, it's a lot easier than it sounds. You must have admin privileges in
 - Click "Allow"
 - After creating the app, select "OAuth & Permissions" on the left side menu
 - Find the "Bot User OAuth Access Token" and copy it - paste it somewhere for future use. You will add this to the "credentials.ini" file later.
+- Find the PaxMiner.png image (https://github.com/srschaecher/PAXminer/blob/main/PaxMiner.png) and download. Use this to replace the app image under "Basic Information" near the bottom.
 - <img src="https://user-images.githubusercontent.com/563929/82573621-94be2b00-9bb8-11ea-991c-f7ae5cfffc15.png" align="center" /> 
 - Under OAuth & Permissions, scroll down to "Scope" and click "Add an OAuth Scope". This is where you will give your new PAXminer app permissions to do things within your Slack workspace. Add all of the following scopes:
 > channels:history, channels:join, channels:read, chat:write, users.profile:read, users:read, users:read.email, commands
