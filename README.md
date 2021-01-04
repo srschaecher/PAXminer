@@ -73,13 +73,10 @@ Don't worry, it's a lot easier than it sounds. You must have admin privileges in
 - Find the PaxMiner.png image (https://github.com/srschaecher/PAXminer/blob/main/PaxMiner.png) and download. Use this to replace the app image under "Basic Information" near the bottom.
 - <img src="https://user-images.githubusercontent.com/563929/82573621-94be2b00-9bb8-11ea-991c-f7ae5cfffc15.png" align="center" /> 
 - Under OAuth & Permissions, scroll down to "Scope" and click "Add an OAuth Scope". This is where you will give your new PAXminer app permissions to do things within your Slack workspace. Add all of the following scopes:
-> channels:history, channels:join, channels:read, chat:write, users.profile:read, users:read, users:read.email, commands
+> channels:history, channels:join, channels:read, chat:write, users.profile:read, users:read, users:read.email, commands, files:write, incoming-webhook
 - After adding all listed Scope settings, Slack will ask you to "Reinstall App". This just means Slack needs to re-push the app's updated settings. Scroll up and click on "Reinstall App". If the access token changes, make sure to copy it.
 - Your Slack environment is now set up for the PAXminer tool to pull messages from your Slack channels.
 
-## Creating an AWS RDS Database
-
-*Under Construction...*
 
 ## Feedback
 - Submit a PR with your feedback!
