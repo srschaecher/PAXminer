@@ -13,22 +13,25 @@ import datetime
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import configparser
+import sys
 
-# Configure Slack credentials
-config = configparser.ConfigParser()
-config.read('/Users/schaecher/PycharmProjects/config/credentials.ini')
-#key = config['slack']['prod_key']
-key = 'xoxb-532986085797-1522344030132-OcU9uqTFXkGXqyqeclz5Wpsz'
-slack = Slacker(key)
-
-# Configure AWS Credentials
+# Configure AWS credentials
+config = configparser.ConfigParser();
+config.read('../config/credentials.ini');
 host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
 #db = config['aws']['db']
-db = 'f3kc' # Set this for a specific region
-region = 'KC'
+db = sys.argv[1]
+region = sys.argv[3]
+
+# Set Slack token
+key = sys.argv[2]
+#key = config['slack']['prod_key']
+slack = Slacker(key)
+firstf = sys.argv[4] #designated 1st-f channel for the region
 
 #Define AWS Database connection criteria
 mydb = pymysql.connect(
@@ -39,6 +42,13 @@ mydb = pymysql.connect(
     db=db,
     charset='utf8mb4',
     cursorclass=pymysql.cursors.DictCursor)
+
+#Get Current Year, Month Number and Name
+d = datetime.datetime.now()
+thismonth = d.strftime("%m")
+thismonthname = d.strftime("%b")
+thismonthnamelong = d.strftime("%B")
+yearnum = d.strftime("%Y")
 
 try:
     with mydb.cursor() as cursor:
@@ -52,35 +62,75 @@ finally:
 total_graphs = 0 # Sets a counter for the total number of graphs made (users with posting data)
 
 # Query AWS by for beatdown history
-try:
-    for ao in aos_df['ao']:
-        month = []
-        day = []
-        year = []
-        with mydb.cursor() as cursor:
-            sql = "SELECT * FROM beatdown_info WHERE AO = %s AND MONTH(Date) IN (10, 11, 12) ORDER BY Date"
-            val = (ao)
-            cursor.execute(sql, val)
-            bd_tmp = cursor.fetchall()
-            bd_tmp_df = pd.DataFrame(bd_tmp)
-            if not bd_tmp_df.empty:
-                for Date in bd_tmp_df['Date']:
-                    datee = datetime.datetime.strptime(str(Date), "%Y-%m-%d")
-                    month.append(datee.strftime("%B"))
-                    day.append(datee.day)
-                    year.append(datee.year)
-                bd_tmp_df['Month'] = month
-                bd_tmp_df['Day'] = day
-                bd_tmp_df['Year'] = year
-                #bd_tmp_df = bd_tmp_df[bd_tmp_df.Month == 'November'] # Keep only October data until I can better figure out how to facet the charts by month
-                bd_tmp_df.groupby(['Q', 'Month']).size().unstack().plot(kind='bar')
-                plt.title('Number of Qs by individual at ' + ao + ' by Month')
+for ao in aos_df['ao']:
+    month = []
+    day = []
+    year = []
+    with mydb.cursor() as cursor:
+        sql = "SELECT * FROM beatdown_info WHERE AO = %s AND YEAR(Date) = %s ORDER BY Date"
+        val = (ao, yearnum)
+        cursor.execute(sql, val)
+        bd_tmp = cursor.fetchall()
+        bd_tmp_df = pd.DataFrame(bd_tmp)
+        if not bd_tmp_df.empty:
+            for Date in bd_tmp_df['Date']:
+                datee = datetime.datetime.strptime(str(Date), "%Y-%m-%d")
+                month.append(datee.strftime("%B"))
+                day.append(datee.day)
+                year.append(datee.year)
+            bd_tmp_df['Month'] = month
+            bd_tmp_df['Day'] = day
+            bd_tmp_df['Year'] = year
+            month_order = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+                           "October", "November", "December"]
+            try:
+                bd_tmp_df.groupby(['Month', 'Q']).size().unstack().sort_values(['Month'], ascending=False).plot(kind='bar')
+                plt.title('Number of Qs by individual at ' + ao + ' by Month for ' + yearnum)
                 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
                 plt.ioff()
-                plt.savefig('./plots/' + region + '/Q_Counts_' + ao + '.jpg', bbox_inches='tight')  # save the figure to a file
-                print('Graph created for AO', ao, 'Sending to Slack now... hang tight!')
-                slack.chat.post_message('U019BCPMD9T', 'Hello ' + ao + '! Here is a look at who has Qd at this AO by month. Is your name on this list?')
-                slack.files.upload('./plots/' + region + '/Q_Counts_' + ao + '.jpg', channels='U019BCPMD9T')
+                #ao = 'U0187M4NWG4' #Use this for testing to send all charts to a specific user
+                plt.savefig('./plots/' + db + '/Q_Counts_' + ao + "_" + thismonthname + yearnum + '.jpg', bbox_inches='tight')  # save the figure to a file
+                print('Q Graph created for AO', ao, 'Sending to Slack now... hang tight!')
+                slack.chat.post_message(ao, 'Hey ' + ao + '! Here is a look at who has Qd at this AO by month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!')
+                slack.files.upload('./plots/' + db + '/Q_Counts_' + ao + "_" + thismonthname + yearnum + '.jpg', channels=ao)
                 total_graphs = total_graphs + 1
+            except:
+                print('An Error Occurred in Sending')
+            finally:
+                print('Message Sent')
+print('Total AO graphs made:', total_graphs)
+
+try:
+    total_graphs = 0
+    month = []
+    day = []
+    year = []
+    with mydb.cursor() as cursor:
+        sql = "SELECT * FROM beatdown_info WHERE YEAR(Date) = %s AND MONTH(Date) = %s ORDER BY Date"
+        val = (yearnum, thismonth)
+        cursor.execute(sql, val)
+        bd_tmp2 = cursor.fetchall()
+        bd_tmp_df2 = pd.DataFrame(bd_tmp2)
+        if not bd_tmp_df2.empty:
+            for Date in bd_tmp_df2['Date']:
+                datee = datetime.datetime.strptime(str(Date), "%Y-%m-%d")
+                month.append(datee.strftime("%B"))
+                day.append(datee.day)
+                year.append(datee.year)
+            bd_tmp_df2['Month'] = month
+            bd_tmp_df2['Day'] = day
+            bd_tmp_df2['Year'] = year
+            bd_tmp_df2.groupby(['Q', 'AO']).size().unstack().plot(kind='bar', stacked = True, figsize=(16,4))
+            #bd_tmp_df2.groupby(['Q'],['AO']).sum().size().plot(kind='bar', stacked=True, sort_columns=False, figsize=(8,4))
+            plt.title('Number of Qs by individual across all AOs for ' + thismonthnamelong + ', ' + yearnum)
+            plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
+            plt.ioff()
+            plt.savefig('./plots/' + db + '/Q_Counts_' + db + "_" + thismonthname + yearnum + '.jpg',
+                        bbox_inches='tight')  # save the figure to a file
+            print('Q Graph created for ', region, 'Sending to Slack now... hang tight!')
+            slack.chat.post_message(firstf, 'Hey ' + region + '! Here is a look at who has Qd across all AOs by month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!')
+            slack.files.upload('./plots/' + db + '/Q_Counts_' + db + "_" + thismonthname + yearnum + '.jpg',
+                               channels=firstf)
+            total_graphs = total_graphs + 1
 finally:
-    print('Total graphs made:', total_graphs)
+    print('Total Q summary graphs made:', total_graphs)

@@ -31,6 +31,8 @@ region = sys.argv[3]
 key = sys.argv[2]
 #key = config['slack']['prod_key']
 slack = Slacker(key)
+firstf = sys.argv[4] #parameter input for designated 1st-f channel for the region
+#firstf = 'U0187M4NWG4' #use this for testing messages to a specific user
 
 #Define AWS Database connection criteria
 mydb = pymysql.connect(
@@ -44,22 +46,29 @@ mydb = pymysql.connect(
 
 total_graphs = 0 # Sets a counter for the total number of graphs made (users with posting data)
 
+#Get Current Year, Month Number and Name
+d = datetime.datetime.now()
+thismonth = d.strftime("%m")
+thismonthname = d.strftime("%b")
+thismonthnamelong = d.strftime("%B")
+yearnum = d.strftime("%Y")
+
 # Query AWS by for beatdown history
 try:
     with mydb.cursor() as cursor:
-        sql = "SELECT DISTINCT AO, MONTHNAME(Date) as Month, PAX FROM attendance_view WHERE MONTH(Date) IN (10, 11, 12)"
-        cursor.execute(sql)
+        sql = "SELECT DISTINCT AO, MONTHNAME(Date) as Month, PAX FROM attendance_view WHERE YEAR(Date) = %s"
+        val = yearnum
+        cursor.execute(sql,val)
         bd_tmp = cursor.fetchall()
         bd_tmp_df = pd.DataFrame(bd_tmp, columns={'AO', 'Month', 'PAX'})
         bd_tmp_df.groupby(['AO', 'Month']).size().unstack().plot(kind='bar')
-        plt.title('Number of unique PAX attending each AO by month')
+        plt.title('Number of unique PAX attending each AO by month in ' + yearnum)
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
-        #plt.show()
         plt.ioff()
-        plt.savefig('./plots/' + db + '/PAX_Counts_By_AO.jpg', bbox_inches='tight')  # save the figure to a file
-        print('Graph created for unique PAX across all AOs. Sending to Slack now... hang tight!')
-        slack.chat.post_message('U40HBU8BB', "Hello " + region + "! Here is a quick look at how many UNIQUE PAX attended beatdowns by AO by Month!")
-        slack.files.upload('./plots/' + db + '/PAX_Counts_By_AO.jpg', channels='U40HBU8BB')
+        plt.savefig('./plots/' + db + '/PAX_Counts_By_AO_' + thismonthname + yearnum + '.jpg', bbox_inches='tight')  # save the figure to a file
+        print('Unique PAX graph created for unique PAX across all AOs. Sending to Slack now... hang tight!')
+        slack.chat.post_message(firstf, "Hello " + region + "! Here is a quick look at how many UNIQUE PAX attended beatdowns by AO by Month for " + yearnum + "!")
+        slack.files.upload('./plots/' + db + '/PAX_Counts_By_AO_' + thismonthname + yearnum + '.jpg', channels=firstf)
         total_graphs = total_graphs + 1
 finally:
     print('Total graphs made:', total_graphs)

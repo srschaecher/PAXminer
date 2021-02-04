@@ -46,6 +46,9 @@ mydb = pymysql.connect(
 epoch = datetime(1970, 1, 1)
 yesterday = datetime.now() - timedelta(days = 1)
 oldest = yesterday.timestamp()
+today = datetime.now()
+cutoff_date = today - timedelta(days = 23) # This tells PAXminer to go back up to N days for message age
+cutoff_date = cutoff_date.strftime('%Y-%m-%d')
 
 # Set up logging
 logging.basicConfig(filename='./logs/PAXminer.log',
@@ -169,18 +172,37 @@ for index, row in f3_df.iterrows():
     text_tmp = re.sub('_\*', '', str(text_tmp))
     text_tmp = re.sub('\*_', '', str(text_tmp))
     text_tmp = re.sub('\*', '', str(text_tmp))
-    if re.findall('^Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        list_pax()
-    elif re.findall('^Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        list_pax()
-    elif re.findall('^Slackblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        list_pax()
-    elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        list_pax()
-    elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        list_pax()
-    elif re.findall('^\*Slackblast', text_tmp, re.IGNORECASE|re.MULTILINE):
-        list_pax()
+    if db == 'f3meca':
+        if re.findall('^Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+        elif re.findall('^Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+        elif re.findall('^\*Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^\*Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+        elif re.findall('^\*Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+        elif re.findall('^Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+        elif re.findall('^Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+        elif re.findall('^\*Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+        elif re.findall('^Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+        elif re.findall('^\*Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+    elif db != 'f3meca':
+        if re.findall('^Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+        elif re.findall('^Back blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+        elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+        elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            list_pax()
+    text_tmp = re.sub('\*', '', text_tmp, re.MULTILINE)
 
 # Now connect to the AWS database and insert some rows!
 inserts = 0
@@ -189,17 +211,19 @@ try:
         for index, row in pax_attendance_df.iterrows():
             sql = "INSERT IGNORE INTO bd_attendance (user_id, ao_id, date) VALUES (%s, %s, %s)"
             user_id_tmp = row['user_id']
+            msg_date = row['msg_date']
             ao_tmp = row['ao']
             date_tmp = row['bd_date']
             val = (user_id_tmp, ao_tmp, date_tmp)
-            if date_tmp == '2099-12-31':
-                print('Backblast error on Date - AO:', ao_tmp, 'Date:', date_tmp, 'Posted By:', user_id_tmp)
-            else:
-                cursor.execute(sql, val)
-                mydb.commit()
-                if cursor.rowcount > 0:
-                    print(cursor.rowcount, "record inserted for", user_id_tmp, "at", ao_tmp, "on", date_tmp)
-                    inserts = inserts + 1
+            if msg_date > cutoff_date:
+                if date_tmp == '2099-12-31':
+                    print('Backblast error on Date - AO:', ao_tmp, 'Date:', date_tmp, 'Posted By:', user_id_tmp)
+                else:
+                    cursor.execute(sql, val)
+                    mydb.commit()
+                    if cursor.rowcount > 0:
+                        print(cursor.rowcount, "record inserted for", user_id_tmp, "at", ao_tmp, "on", date_tmp)
+                        inserts = inserts + 1
 finally:
     mydb.close()
 logging.info("PAXminer complete: Inserted %s new PAX attendance records for region %s", inserts, db)

@@ -48,7 +48,7 @@ epoch = datetime(1970, 1, 1)
 yesterday = datetime.now() - timedelta(days = 1)
 oldest = yesterday.timestamp()
 today = datetime.now()
-cutoff_date = today - timedelta(days = 14) # This tells BDminer to go back up to N days for message age
+cutoff_date = today - timedelta(days = 23) # This tells BDminer to go back up to N days for message age
 cutoff_date = cutoff_date.strftime('%Y-%m-%d')
 
 # Set up logging
@@ -200,7 +200,23 @@ for index, row in f3_df.iterrows():
     if db == 'f3meca':
         if re.findall('^Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
             bd_info()
+        elif re.findall('^Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
         elif re.findall('^\*Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^\*Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^\*Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^\*Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
+            bd_info()
+        elif re.findall('^\*Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
             bd_info()
     elif db != 'f3meca':
         if re.findall('^Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
@@ -285,6 +301,11 @@ try:
         sql3 = "UPDATE beatdowns SET coq_user_id=NULL where coq_user_id = 'NA'"
         cursor.execute(sql3)
         mydb.commit()
+
+        sql4 = "UPDATE beatdowns SET fng_count = 0 WHERE fng_count IS NULL AND fngs LIKE '%None%'"
+        cursor.execute(sql4)
+        mydb.commit()
+
 finally:
     mydb.close()
 print('Finished. Beatdowns are up to date.')

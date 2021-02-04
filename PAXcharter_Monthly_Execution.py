@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
-This script executes the daily PAXminer backblast queries and data updates for all F3 regions using PAXminer.
+This script executes the monthly PAXcharter backblast queries and data updates for all F3 regions using PAXminer.
 '''
 
 from slacker import Slacker
@@ -35,10 +35,10 @@ mydb1 = pymysql.connect(
 # Get list of regions and Slack tokens for PAXminer execution
 try:
     with mydb1.cursor() as cursor:
-        sql = "SELECT * FROM paxminer.regions where region = 'Dallas'" # <-- Update this for whatever region is being tested
+        sql = "SELECT * FROM paxminer.regions where firstf_channel IS NOT NULL AND send_pax_messages = 1"
         cursor.execute(sql)
         regions = cursor.fetchall()
-        regions_df = pd.DataFrame(regions, columns={'region', 'slack_token', 'schema_name'})
+        regions_df = pd.DataFrame(regions)
 finally:
     print('Getting list of regions that use PAXminer...')
 
@@ -46,10 +46,12 @@ for index, row in regions_df.iterrows():
     region = row['region']
     key = row['slack_token']
     db = row['schema_name']
-    print('Executing user updates for region ' + region)
-    os.system("./F3SlackUserLister.py " + db + " " + key)
-    os.system("./F3SlackChannelLister.py " + db + " " + key)
-    #os.system("./BDminer.py " + db + " " + key)
-    #os.system("./PAXminer.py " + db + " " + key)
+    firstf = row['firstf_channel']
+    #firstf = 'U0187M4NWG4' # <--- Use this if sending a test msg to a specific user
+    print('Processing statistics for region ' + region)
+    os.system("./PAXcharter.py " + db + " " + key)
+    os.system("./Qcharter.py " + db + " " + key + " " + region + " " + firstf)
+    os.system("./UniquePAXCharter.py " + db + " " + key + " " + region + " " + firstf)
+    os.system("./AOcharter.py " + db + " " + key + " " + region + " " + firstf)
     print('----------------- End of Region Update -----------------\n')
-print('\nPAXminer execution complete.')
+print('\nPAXcharter execution complete.')

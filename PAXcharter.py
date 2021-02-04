@@ -42,6 +42,13 @@ mydb = pymysql.connect(
     charset='utf8mb4',
     cursorclass=pymysql.cursors.DictCursor)
 
+#Get Current Year, Month Number and Name
+d = datetime.datetime.now()
+thismonth = d.strftime("%m")
+thismonthname = d.strftime("%b")
+thismonthnamelong = d.strftime("%B")
+yearnum = d.strftime("%Y")
+
 print('Looking for all Slack Users for ' + db + '. Stand by...')
 # Make users Data Frame
 users_response = slack.users.list()
@@ -55,22 +62,15 @@ print('Now pulling all of those users beatdown attendance records... Stand by...
 # Query AWS by user ID for attendance history
 #users_df = users_df.iloc[:10] # THIS LINE IS FOR TESTING PURPOSES, THIS FORCES ONLY n USER ROWS TO BE SENT THROUGH THE PIPE
 total_graphs = 0 # Sets a counter for the total number of graphs made (users with posting data)
-pause_on = [ 50, 100, 150, 200, 250, 300 ]
+pause_on = [ 50, 100, 150, 200, 250, 300, 350, 400 ]
 
-# This section imports the log file of users that have been processed - to be used if the PAXcharter breaks during processing so it can resume where it left off
-#file = open('./logs/f3stl/PAXcharter.log', 'r')
-#processedUserList = file.readlines()
-n = 0
 for user_id in users_df['user_id']:
     try:
         attendance_tmp_df = pd.DataFrame([])  # creates an empty dataframe to append to
-        n = n + 1
-        print(n)
-        if n > 0:
-            with mydb.cursor() as cursor:
-                sql = "SELECT * FROM attendance_view WHERE PAX = (SELECT user_name FROM users WHERE user_id = %s) AND MONTH(Date) IN (10, 11, 12) ORDER BY Date"
+        with mydb.cursor() as cursor:
+                sql = "SELECT * FROM attendance_view WHERE PAX = (SELECT user_name FROM users WHERE user_id = %s) AND YEAR(Date) = %s ORDER BY Date"
                 user_id_tmp = user_id
-                val = user_id_tmp
+                val = (user_id_tmp, yearnum)
                 cursor.execute(sql, val)
                 attendance_tmp = cursor.fetchall()
                 attendance_tmp_df = pd.DataFrame(attendance_tmp)
@@ -79,9 +79,9 @@ for user_id in users_df['user_id']:
                 year = []
                 count = attendance_tmp_df.shape[0]
                 if (total_graphs in pause_on):
-                    time.sleep(10)
-                if user_id_tmp == 'U40HBU8BB': #Use this to send a graph to only 1 specific PAX
-                #if count > 0: # This sends a graph to ALL PAX who have attended at least 1 beatdown
+                    time.sleep(15)
+                #if user_id_tmp == 'U0187M4NWG4': #Use this to send a graph to only 1 specific PAX
+                if count > 0: # This sends a graph to ALL PAX who have attended at least 1 beatdown
                     for Date in attendance_tmp_df['Date']:
                     #for index, row in attendance_tmp_df.iterrows():
                         datee = datetime.datetime.strptime(Date, "%Y-%m-%d")
@@ -95,17 +95,20 @@ for user_id in users_df['user_id']:
                     attendance_tmp_df.sort_values(by=['Month'], inplace = True)
                     month_order = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
                     attendance_tmp_df.groupby(['Month', 'AO']).size().unstack().sort_values(['Month'], ascending=False).plot(kind='bar', stacked=True)
-                    plt.title('Number of posts from '+ pax + ' by AO/Month')
+                    plt.title('Number of posts from '+ pax + ' by AO/Month for ' + yearnum)
                     plt.legend(loc = 'center left', bbox_to_anchor=(1, 0.5), frameon = False)
                     plt.ioff()
-                    plt.savefig('./plots/' + db + '/' + user_id_tmp + '.jpg', bbox_inches='tight') #save the figure to a file
-                    print('Graph created for user', pax, 'Sending to Slack now... hang tight!')
-                    slack.chat.post_message(user_id_tmp, 'Hey ' + pax + "! Happy New Year! Here is your posting summary for December. Lets make 2021 even better - SYITG!")
-                    slack.files.upload('./plots/' + db + '/' + user_id_tmp + '.jpg',channels=user_id_tmp)
-                    attendance_tmp_df.hist()
+                    plt.savefig('./plots/' + db + '/' + user_id_tmp + "_" + thismonthname + yearnum + '.jpg', bbox_inches='tight') #save the figure to a file
                     total_graphs = total_graphs + 1
-                    os.system("echo " + user_id_tmp + " >>" + "./logs/" + db + "/PAXcharter.log")
+                    if total_graphs > 0: # This is a count of total users processed, in case of error during processing. Set the total_graphs > to whatever # comes next in the log file row count.
+                        print(total_graphs, 'PAX posting graph created for user', pax, 'Sending to Slack now... hang tight!')
+                        slack.chat.post_message(user_id_tmp, 'Hey ' + pax + "! Here is your monthly posting summary for " + yearnum + ". \nPush yourself, get those bars higher every month! SYITG!")
+                        slack.files.upload('./plots/' + db + '/' + user_id_tmp + "_" + thismonthname + yearnum + '.jpg',channels=user_id_tmp)
+                        attendance_tmp_df.hist()
+                        os.system("echo " + user_id_tmp + " >>" + "./logs/" + db + "/PAXcharter.log")
+    except:
+            print("An exception occurred")
     finally:
-        pass
+        plt.close('all') #Note - this was added after the December 2020 processing, make sure this works
 print('Total graphs made:', total_graphs)
 mydb.close()
