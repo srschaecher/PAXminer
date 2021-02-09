@@ -197,7 +197,7 @@ for index, row in f3_df.iterrows():
     text_tmp = re.sub('\*', '', str(text_tmp))
     user_name = row['user_name']
     user_id = row['user_id']
-    if db == 'f3meca':
+    if db in ['f3meca','f3memphis']:
         if re.findall('^Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
             bd_info()
         elif re.findall('^Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):

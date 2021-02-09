@@ -53,6 +53,7 @@ for index, row in regions_df.iterrows():
     #os.system("./UniquePAXCharter.py " + db + " " + key + " " + region + " " + firstf)
     #os.system("./QCharter.py " + db + " " + key + " " + region + " " + firstf)
     os.system("./Leaderboard_Charter.py " + db + " " + key + " " + region + " " + firstf)
+    os.system("./LeaderboardByAO_Charter.py " + db + " " + key + " " + region + " " + firstf)
     #os.system("./AOCharter.py " + db + " " + key + " " + region + " " + firstf)
     print('----------------- End of Region Update -----------------\n')
 print('\nPAXcharter execution complete.')

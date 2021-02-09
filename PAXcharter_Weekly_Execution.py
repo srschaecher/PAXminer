@@ -49,6 +49,7 @@ for index, row in regions_df.iterrows():
     firstf = row['firstf_channel']
     #firstf = 'U0187M4NWG4' # <--- Use this if sending a test msg to a specific user
     print('Processing statistics for region ' + region)
-    os.system("./Leaderboard_Charter.py " + db + " " + key + " " + region + " " + firstf)
+    #os.system("./Leaderboard_Charter.py " + db + " " + key + " " + region + " " + firstf)
+    os.system("./LeaderboardByAO_Charter.py " + db + " " + key + " " + region + " " + firstf)
     print('----------------- End of Region Update -----------------\n')
 print('\nPAXcharter execution complete.')
