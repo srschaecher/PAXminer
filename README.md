@@ -17,6 +17,9 @@ This tool started out with me saying "there HAS to be a beter way to do this" as
 
 Tracking this information lets you ask many different questions about your F3 attendance patterns, such as:
 
+## Setting up a new region to use PAXminer
+Paxminer was designed to be a multi-region tool running in the cloud. Adding a new region to use PAXminer is fairly simple and straightforward. While you are welcome to download the scripts and implement your own version, you can be up and running quickly if you choose to use the existing platform. All you need to do to start is to add the app to your local Slack workspace as detailed below, then contact Beaker (F3STL) who will add your region to the workflow.
+
 ## Files
 - *F3SlackChannelLister.py* : Pulls all channel information from the Slack workspace and inserts/updates the info in the database. Channel info is required for the rest of the processes.
 - *F3SlackUserLister.py* : Python script that pulls all PAX user info from Slack and inserts it into the database. User info is required for the rest of the processes.
