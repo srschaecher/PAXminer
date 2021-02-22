@@ -50,6 +50,6 @@ for index, row in regions_df.iterrows():
     #os.system("./F3SlackUserLister.py " + db + " " + key)
     #os.system("./F3SlackChannelLister.py " + db + " " + key)
     os.system("./BDminer.py " + db + " " + key)
-    #os.system("./PAXminer.py " + db + " " + key)
+    os.system("./PAXminer.py " + db + " " + key)
     print('----------------- End of Region Update -----------------\n')
 print('\nPAXminer execution complete.')

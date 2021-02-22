@@ -40,7 +40,7 @@ mydb = pymysql.connect(
     cursorclass=pymysql.cursors.DictCursor)
 
 # Get channel list
-channels_response = slack.conversations.list()
+channels_response = slack.conversations.list(limit=999)
 channels = channels_response.body['channels']
 channels_df = pd.json_normalize(channels)
 channels_df = channels_df[['id', 'name', 'created', 'is_archived']]

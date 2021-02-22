@@ -48,7 +48,7 @@ epoch = datetime(1970, 1, 1)
 yesterday = datetime.now() - timedelta(days = 1)
 oldest = yesterday.timestamp()
 today = datetime.now()
-cutoff_date = today - timedelta(days = 23) # This tells BDminer to go back up to N days for message age
+cutoff_date = today - timedelta(days = 14) # This tells BDminer to go back up to N days for message age
 cutoff_date = cutoff_date.strftime('%Y-%m-%d')
 
 # Set up logging
@@ -304,6 +304,10 @@ try:
 
         sql4 = "UPDATE beatdowns SET fng_count = 0 WHERE fng_count IS NULL AND fngs LIKE '%None%'"
         cursor.execute(sql4)
+        mydb.commit()
+
+        sql5 = "UPDATE beatdowns SET fng_count = 0 WHERE fng_count IS NULL AND fngs = 0"
+        cursor.execute(sql5)
         mydb.commit()
 
 finally:

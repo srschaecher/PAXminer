@@ -10,6 +10,11 @@ import pymysql.cursors
 import configparser
 import os
 
+# Set the working directory to the directory of the script
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
+
 # Configure AWS credentials
 config = configparser.ConfigParser();
 config.read('../config/credentials.ini');

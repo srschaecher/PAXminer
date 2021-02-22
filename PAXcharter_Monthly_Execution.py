@@ -10,6 +10,11 @@ import pymysql.cursors
 import configparser
 import os
 
+# Set the working directory to the directory of the script
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
+
 # Configure AWS credentials
 config = configparser.ConfigParser();
 config.read('../config/credentials.ini');
@@ -52,6 +57,6 @@ for index, row in regions_df.iterrows():
     os.system("./PAXcharter.py " + db + " " + key)
     os.system("./Qcharter.py " + db + " " + key + " " + region + " " + firstf)
     os.system("./UniquePAXCharter.py " + db + " " + key + " " + region + " " + firstf)
-    os.system("./AOcharter.py " + db + " " + key + " " + region + " " + firstf)
+    #os.system("./AOcharter.py " + db + " " + key + " " + region + " " + firstf)
     print('----------------- End of Region Update -----------------\n')
 print('\nPAXcharter execution complete.')

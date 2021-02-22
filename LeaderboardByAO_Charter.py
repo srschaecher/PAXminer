@@ -2,8 +2,8 @@
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
 This script queries the AWS F3(region) database for attendance records. It then generates leaderboard bar graphs
-for each region across all AOs for the current month and YTD on total attendance.
-The graph then is sent it to the 1st F channel in a Slack message.
+for each AO for the current month and YTD on total attendance.
+The graph then is sent to each AO in a Slack message.
 '''
 
 from slacker import Slacker
@@ -111,7 +111,7 @@ for ao in aos_df['ao']:
             val = (yearnum, ao)
             cursor.execute(sql, val)
             posts = cursor.fetchall()
-            posts_df = pd.DataFrame(posts, columns={'PAX', 'UniqueAOs', 'Posts'})
+            posts_df = pd.DataFrame(posts, columns={'PAX', 'Posts'})
     finally:
         print('Now pulling all posting records for', ao, '... Stand by...')
 
