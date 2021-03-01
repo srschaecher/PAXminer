@@ -15,7 +15,7 @@ PAXminer pulls the following infomation from Backblasts and sends it to a shared
 
 This tool started out with me saying "there HAS to be a beter way to do this" as we were collecting our F3 posting stats manually in Excel. We are adding new things to the process every day! The more regions that get involved, the better and more standardized we can make it! All collaboration is welcome!
 
-Tracking this information lets you ask many different questions about your F3 attendance patterns, such as:
+
 
 ## Setting up a new region to use PAXminer
 Paxminer was designed to be a multi-region tool running in the cloud. Adding a new region to use PAXminer is fairly simple and straightforward. While you are welcome to download the scripts and implement your own version, you can be up and running quickly if you choose to use the existing platform. All you need to do to start is to add the app to your local Slack workspace as detailed below, then contact Beaker (F3STL) who will add your region to the workflow.
@@ -37,7 +37,7 @@ Paxminer was designed to be a multi-region tool running in the cloud. Adding a n
 - *README.md* : This readme
 
 ## Examples
-
+Tracking this information lets you ask many different questions about your F3 attendance patterns, such as:
 - How many times has Beaker (that's me) attended a beatdown this week/month/year? 
 - What AO does Beaker most often attend?
 - What days of the week are busiest across all AOs?
