@@ -8,26 +8,24 @@ multiple region updates.
 Usage: F3SlackChannelLister.py [db_name] [slack_token]
 '''
 
-from slacker import Slacker
 import pandas as pd
 import pymysql.cursors
 import configparser
 import sys
+from slack_sdk import WebClient
 
 # Configure AWS credentials
 config = configparser.ConfigParser();
 config.read('../config/credentials.ini');
-#key = config['slack']['prod_key']
 host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
-#db = config['aws']['db']
 db = sys.argv[1]
 
 # Set Slack tokens
 key = sys.argv[2]
-slack = Slacker(key)
+slack = WebClient(token=key)
 
 #Define AWS Database connection criteria
 mydb = pymysql.connect(
@@ -40,8 +38,8 @@ mydb = pymysql.connect(
     cursorclass=pymysql.cursors.DictCursor)
 
 # Get channel list
-channels_response = slack.conversations.list(limit=999)
-channels = channels_response.body['channels']
+channels_response = slack.conversations_list(limit=999)
+channels = channels_response.data['channels']
 channels_df = pd.json_normalize(channels)
 channels_df = channels_df[['id', 'name', 'created', 'is_archived']]
 channels_df = channels_df.rename(columns={'id' : 'channel_id', 'name' : 'ao', 'created' : 'channel_created', 'is_archived' : 'archived'})

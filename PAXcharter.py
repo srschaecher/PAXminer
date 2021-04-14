@@ -44,6 +44,7 @@ mydb = pymysql.connect(
 
 #Get Current Year, Month Number and Name
 d = datetime.datetime.now()
+d = d - datetime.timedelta(days=1)
 thismonth = d.strftime("%m")
 thismonthname = d.strftime("%b")
 thismonthnamelong = d.strftime("%B")
@@ -79,7 +80,7 @@ for user_id in users_df['user_id']:
                 year = []
                 count = attendance_tmp_df.shape[0]
                 if (total_graphs in pause_on):
-                    time.sleep(15)
+                    time.sleep(1)
                 #if user_id_tmp == 'U0187M4NWG4': #Use this to send a graph to only 1 specific PAX
                 if count > 0: # This sends a graph to ALL PAX who have attended at least 1 beatdown
                     for Date in attendance_tmp_df['Date']:
@@ -100,7 +101,8 @@ for user_id in users_df['user_id']:
                     plt.ioff()
                     plt.savefig('./plots/' + db + '/' + user_id_tmp + "_" + thismonthname + yearnum + '.jpg', bbox_inches='tight') #save the figure to a file
                     total_graphs = total_graphs + 1
-                    if total_graphs > 0: # This is a count of total users processed, in case of error during processing. Set the total_graphs > to whatever # comes next in the log file row count.
+                    #manual_graphs = [240,241,242,244,245,246,247,249,250]
+                    if total_graphs > 0 # This is a count of total users processed, in case of error during processing. Set the total_graphs > to whatever # comes next in the log file row count.
                         print(total_graphs, 'PAX posting graph created for user', pax, 'Sending to Slack now... hang tight!')
                         slack.chat.post_message(user_id_tmp, 'Hey ' + pax + "! Here is your monthly posting summary for " + yearnum + ". \nPush yourself, get those bars higher every month! SYITG!")
                         slack.files.upload('./plots/' + db + '/' + user_id_tmp + "_" + thismonthname + yearnum + '.jpg',channels=user_id_tmp)

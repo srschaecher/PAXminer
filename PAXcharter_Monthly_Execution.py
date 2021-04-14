@@ -40,7 +40,7 @@ mydb1 = pymysql.connect(
 # Get list of regions and Slack tokens for PAXminer execution
 try:
     with mydb1.cursor() as cursor:
-        sql = "SELECT * FROM paxminer.regions where firstf_channel IS NOT NULL AND send_pax_messages = 1"
+        sql = "SELECT * FROM paxminer.regions where firstf_channel IS NOT NULL AND send_pax_charts = 1"
         cursor.execute(sql)
         regions = cursor.fetchall()
         regions_df = pd.DataFrame(regions)
@@ -55,8 +55,8 @@ for index, row in regions_df.iterrows():
     #firstf = 'U0187M4NWG4' # <--- Use this if sending a test msg to a specific user
     print('Processing statistics for region ' + region)
     os.system("./PAXcharter.py " + db + " " + key)
-    os.system("./Qcharter.py " + db + " " + key + " " + region + " " + firstf)
-    os.system("./UniquePAXCharter.py " + db + " " + key + " " + region + " " + firstf)
+    #os.system("./Qcharter.py " + db + " " + key + " " + region + " " + firstf)
+    #os.system("./UniquePAXCharter.py " + db + " " + key + " " + region + " " + firstf)
     #os.system("./AOcharter.py " + db + " " + key + " " + region + " " + firstf)
     print('----------------- End of Region Update -----------------\n')
 print('\nPAXcharter execution complete.')

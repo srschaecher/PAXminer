@@ -6,7 +6,8 @@ All Backblasts are then parsed to collect the PAX that attend any given workout 
 '''
 
 import warnings
-from slacker import Slacker
+#from slacker import Slacker
+from slack_sdk import WebClient
 from datetime import datetime, timedelta
 import pandas as pd
 import pytz
@@ -24,13 +25,11 @@ host = config['aws']['host']
 port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
-#db = config['aws']['db']
 db = sys.argv[1]
 
 # Set Slack token
 key = sys.argv[2]
-#key = config['slack']['prod_key']
-slack = Slacker(key)
+slack = WebClient(token=key)
 
 #Define AWS Database connection criteria
 mydb = pymysql.connect(
@@ -47,7 +46,7 @@ epoch = datetime(1970, 1, 1)
 yesterday = datetime.now() - timedelta(days = 1)
 oldest = yesterday.timestamp()
 today = datetime.now()
-cutoff_date = today - timedelta(days = 23) # This tells PAXminer to go back up to N days for message age
+cutoff_date = today - timedelta(days = 14) # This tells PAXminer to go back up to N days for message age
 cutoff_date = cutoff_date.strftime('%Y-%m-%d')
 
 # Set up logging
@@ -62,11 +61,24 @@ logging.info("Running PAXminer for " + db)
 #slack.chat.post_message('#general', 'Don't mind me, I'm debugging PAXminer again!')
 
 # Make users Data Frame
-users_response = slack.users.list()
-users = users_response.body['members']
-users_df = pd.json_normalize(users)
-users_df = users_df[['id', 'profile.display_name', 'profile.real_name']]
-users_df = users_df.rename(columns={'id' : 'user_id', 'profile.display_name' : 'user_name', 'profile.real_name' : 'real_name'})
+column_names = ['user_id', 'user_name', 'real_name']
+users_df = pd.DataFrame(columns = column_names)
+data = ''
+while True:
+    users_response = slack.users_list(limit=1000, cursor=data)
+    response_metadata = users_response.get('response_metadata', {})
+    next_cursor = response_metadata.get('next_cursor')
+    users = users_response.data['members']
+    users_df_tmp = pd.json_normalize(users)
+    users_df_tmp = users_df_tmp[['id', 'profile.display_name', 'profile.real_name']]
+    users_df_tmp = users_df_tmp.rename(columns={'id' : 'user_id', 'profile.display_name' : 'user_name', 'profile.real_name' : 'real_name'})
+    users_df = users_df.append(users_df_tmp, ignore_index=True)
+    if next_cursor:
+        # Keep going from next offset.
+        #print('next_cursor =' + next_cursor)
+        data = next_cursor
+    else:
+        break
 for index, row in users_df.iterrows():
     un_tmp = row['user_name']
     rn_tmp = row['real_name']
@@ -95,18 +107,29 @@ finally:
 # Get all channel conversation
 messages_df = pd.DataFrame([]) # creates an empty dataframe to append to
 for id in channels_df['channel_id']:
-    try:
-        # print("Checking channel " + id) # <-- Use this if debugging any slack channels throwing errors
-        response = slack.conversations.history(id)
-        messages = response.body['messages']
-        temp_df = pd.json_normalize(messages)
-        temp_df = temp_df[['user', 'type', 'text', 'ts']]
-        temp_df = temp_df.rename(columns={'user' : 'user_id', 'type' : 'message_type', 'ts' : 'timestamp'})
-        temp_df["channel_id"] = id
-        messages_df = messages_df.append(temp_df, ignore_index=True)
-    except:
-        print("Error: Unable to access Slack channel:", id, "in region:",db)
-        logging.warning("Error: Unable to access Slack channel %s in region %s", id, db)
+    data = ''
+    while True:
+        try:
+            #print("Checking channel " + id) # <-- Use this if debugging any slack channels throwing errors
+            response = slack.conversations_history(channel=id, cursor=data)
+            response_metadata = response.get('response_metadata', {})
+            next_cursor = response_metadata.get('next_cursor')
+            messages = response.data['messages']
+            temp_df = pd.json_normalize(messages)
+            temp_df = temp_df[['user', 'type', 'text', 'ts']]
+            temp_df = temp_df.rename(columns={'user' : 'user_id', 'type' : 'message_type', 'ts' : 'timestamp'})
+            temp_df["channel_id"] = id
+            messages_df = messages_df.append(temp_df, ignore_index=True)
+        except:
+            print("Error: Unable to access Slack channel:", id, "in region:",db)
+            logging.warning("Error: Unable to access Slack channel %s in region %s", id, db)
+        if next_cursor:
+            # Keep going from next offset.
+            #print('Next Page Cursor:', next_cursor)
+            data = next_cursor
+        else:
+            #print('Finished finding PAX... parsing...')
+            break
 # Calculate Date and Time columns
 msg_date = []
 msg_time = []
@@ -132,6 +155,19 @@ pax_attendance_df = pd.DataFrame([])
 warnings.filterwarnings("ignore", category=DeprecationWarning) #This prevents displaying the Deprecation Warning that is present for the RegEx lookahead function used below
 
 def list_pax():
+    #find Q info
+    qline = re.findall(r'(?<=\n)\*?V?Qs?\*?:.+?(?=\n)', str(text_tmp),
+                       re.MULTILINE)  # This is regex looking for \nQ: with or without an * before Q
+    qids = re.findall(pat, str(qline), re.MULTILINE)
+    qids = [re.sub(r'@', '', i) for i in qids]
+    if qids:
+        qid = qids[0]
+    else:
+        qid = 'NA'
+    if len(qids) > 1:
+        coqid = qids[1]
+    else:
+        coqid = 'NA'
     #paxline = [line for line in text_tmp.split('\n') if 'pax'.casefold() in line.casefold()]
     paxline = re.findall(r'(?<=\n)\*?(?i)PAX\*?:\*?.+?(?=\n)', str(text_tmp), re.MULTILINE) #This is a case insensitive regex looking for \nPAX with or without an * before PAX
     #print(paxline)
@@ -162,6 +198,7 @@ def list_pax():
             date_tmp = msg_date
         df['bd_date'] = date_tmp
         df['msg_date'] = msg_date
+        df['q_user_id'] = qid
         pax_attendance_df = pax_attendance_df.append(df)
 # Iterate through the new f3_df dataframe, pull out the channel_name, date, and text line from Slack. Process the text line to find the Pax list
 for index, row in f3_df.iterrows():
@@ -209,21 +246,23 @@ inserts = 0
 try:
     with mydb.cursor() as cursor:
         for index, row in pax_attendance_df.iterrows():
-            sql = "INSERT IGNORE INTO bd_attendance (user_id, ao_id, date) VALUES (%s, %s, %s)"
+            sql = "INSERT IGNORE INTO bd_attendance (user_id, ao_id, date, q_user_id) VALUES (%s, %s, %s, %s)"
             user_id_tmp = row['user_id']
             msg_date = row['msg_date']
             ao_tmp = row['ao']
             date_tmp = row['bd_date']
-            val = (user_id_tmp, ao_tmp, date_tmp)
+            q_user_id = row['q_user_id']
+            val = (user_id_tmp, ao_tmp, date_tmp, q_user_id)
             if msg_date > cutoff_date:
                 if date_tmp == '2099-12-31':
                     print('Backblast error on Date - AO:', ao_tmp, 'Date:', date_tmp, 'Posted By:', user_id_tmp)
                 else:
-                    cursor.execute(sql, val)
-                    mydb.commit()
-                    if cursor.rowcount > 0:
-                        print(cursor.rowcount, "record inserted for", user_id_tmp, "at", ao_tmp, "on", date_tmp)
-                        inserts = inserts + 1
+                    if q_user_id != 'NA':
+                        cursor.execute(sql, val)
+                        mydb.commit()
+                        if cursor.rowcount > 0:
+                            print(cursor.rowcount, "record inserted for", user_id_tmp, "at", ao_tmp, "on", date_tmp, "with Q =", q_user_id)
+                            inserts = inserts + 1
 finally:
     mydb.close()
 logging.info("PAXminer complete: Inserted %s new PAX attendance records for region %s", inserts, db)

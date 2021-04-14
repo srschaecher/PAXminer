@@ -50,6 +50,7 @@ total_graphs = 0 # Sets a counter for the total number of graphs made (users wit
 
 #Get Current Year, Month Number and Name
 d = datetime.datetime.now()
+d = d - datetime.timedelta(days=1)
 thismonth = d.strftime("%m")
 thismonthname = d.strftime("%b")
 thismonthnamelong = d.strftime("%B")
@@ -66,9 +67,10 @@ try:
         left outer join beatdown_info bd on bd.AO = av.ao and bd.date = av.Date \
         left outer join (select sum(pax_count) as TotalPax, AO, month(Date) as month, year(Date) as Year from beatdown_info GROUP BY year, month, AO) x on x.AO = av.AO and x.month=(month(av.date)) and x.year = (year(av.date)) \
         WHERE Year = %s \
+        AND Month = %s \
         GROUP BY year, Month, AO \
         order by Year desc, Month desc, Round(x.TotalPax/count(Distinct av.Date),1) desc"
-        val = yearnum
+        val = (yearnum, thismonth)
         cursor.execute(sql,val)
         bd_tmp = cursor.fetchall()
         bd_tmp_df = pd.DataFrame(bd_tmp)
@@ -78,7 +80,7 @@ try:
         #fig = ff.create_table(bd_df_styled)
         #fig.write_image('./plots/' + db + '/AO_SummaryTable' + thismonthname + yearnum + '.jpg')
         print('AO summary table created for all AOs. Sending to Slack now... hang tight!')
-        slack.chat.post_message(firstf, "Hello " + region + "! Here is a detailed summary of AO posting stats for the region in " + yearnum + "!")
+        slack.chat.post_message(firstf, "Hey " + region + " - it's the First of the Month! (queue Bone, Thungz and Harmony tunes here)! Here is a detailed summary of AO posting stats for the region last month.")
         slack.files.upload('./plots/' + db + '/AO_SummaryTable' + thismonthname + yearnum + '.jpg', channels=firstf)
         total_graphs = total_graphs + 1
 finally:

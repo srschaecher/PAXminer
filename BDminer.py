@@ -6,7 +6,7 @@ All Backblasts are then parsed to collect the BEATDOWN information for any given
 '''
 
 import warnings
-from slacker import Slacker
+from slack_sdk import WebClient
 from datetime import datetime, timedelta
 import dateparser
 import pandas as pd
@@ -26,12 +26,10 @@ port = int(config['aws']['port'])
 user = config['aws']['user']
 password = config['aws']['password']
 db = sys.argv[1] # Use this for the multi-region automated update
-#db = 'f3stl' # Use this for manual update
 
 # Set Slack token
 key = sys.argv[2] # Use this for the multi-region automated update
-#key = config['slack']['prod_key'] # Use this for the manual update
-slack = Slacker(key)
+slack = WebClient(token=key)
 
 #Define AWS Database connection criteria
 mydb = pymysql.connect(
@@ -60,16 +58,30 @@ logging.basicConfig(filename='./logs/BDminer.log',
 logging.info("Running BDminer for " + db)
 
 # Make users Data Frame
-users_response = slack.users.list()
-users = users_response.body['members']
-users_df = pd.json_normalize(users)
-users_df = users_df[['id', 'profile.display_name', 'profile.real_name']]
-users_df = users_df.rename(columns={'id' : 'user_id', 'profile.display_name' : 'user_name', 'profile.real_name' : 'real_name'})
+column_names = ['user_id', 'user_name', 'real_name']
+users_df = pd.DataFrame(columns = column_names)
+data = ''
+while True:
+    users_response = slack.users_list(limit=1000, cursor=data)
+    response_metadata = users_response.get('response_metadata', {})
+    next_cursor = response_metadata.get('next_cursor')
+    users = users_response.data['members']
+    users_df_tmp = pd.json_normalize(users)
+    users_df_tmp = users_df_tmp[['id', 'profile.display_name', 'profile.real_name']]
+    users_df_tmp = users_df_tmp.rename(columns={'id' : 'user_id', 'profile.display_name' : 'user_name', 'profile.real_name' : 'real_name'})
+    users_df = users_df.append(users_df_tmp, ignore_index=True)
+    if next_cursor:
+        # Keep going from next offset.
+        #print('next_cursor =' + next_cursor)
+        data = next_cursor
+    else:
+        break
 for index, row in users_df.iterrows():
     un_tmp = row['user_name']
     rn_tmp = row['real_name']
     if un_tmp == "" :
         row['user_name'] = rn_tmp
+
 
 try:
     with mydb.cursor() as cursor:
@@ -83,18 +95,30 @@ finally:
 # Get all channel conversation
 messages_df = pd.DataFrame([]) #creates an empty dataframe to append to
 for id in channels_df['channel_id']:
-    try:
-        #print("Checking channel " + id) # <-- Use this if debugging any slack channels throwing errors
-        response = slack.conversations.history(id)
-        messages = response.body['messages']
-        temp_df = pd.json_normalize(messages)
-        temp_df = temp_df[['user', 'type', 'text', 'ts']]
-        temp_df = temp_df.rename(columns={'user' : 'user_id', 'type' : 'message_type', 'ts' : 'timestamp'})
-        temp_df["channel_id"] = id
-        messages_df = messages_df.append(temp_df, ignore_index=True)
-    except:
-        print("Error: Unable to access Slack channel:", id, "in region:", db)
-        logging.warning("Error: Unable to access Slack channel %s in region %s", id, db)
+    data = ''
+    while True:
+        try:
+            #print("Checking channel " + id) # <-- Use this if debugging any slack channels throwing errors
+            response = slack.conversations_history(channel=id, cursor=data)
+            response_metadata = response.get('response_metadata', {})
+            next_cursor = response_metadata.get('next_cursor')
+            messages = response.data['messages']
+            temp_df = pd.json_normalize(messages)
+            temp_df = temp_df[['user', 'type', 'text', 'ts']]
+            temp_df = temp_df.rename(columns={'user' : 'user_id', 'type' : 'message_type', 'ts' : 'timestamp'})
+            temp_df["channel_id"] = id
+            messages_df = messages_df.append(temp_df, ignore_index=True)
+        except:
+            print("Error: Unable to access Slack channel:", id, "in region:",db)
+            logging.warning("Error: Unable to access Slack channel %s in region %s", id, db)
+        if next_cursor:
+            # Keep going from next offset.
+            # print('next_cursor =' + next_cursor)
+            #print(next_cursor)
+            data = next_cursor
+        else:
+            #print('Finished channel', id)
+            break
 
 # Calculate Date and Time columns
 msg_date = []
@@ -166,8 +190,6 @@ def bd_info():
         dateline = re.sub("Date:\s?", '', str(dateline), flags=re.I)
         #print("Removed Date: " + dateline)
         dateline = dateparser.parse(dateline) #dateparser is a flexible date module that can understand many different date formats
-        #print("Parsed:")
-        #print(dateline)
         if dateline is None:
             date_tmp = '2099-12-31' #sets a date many years in the future just to catch this error later (needs to be a future date)
         else:
@@ -250,21 +272,21 @@ try:
                 if q_user_id == 'NA':
                     logging.warning("Q error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, msg_date, user_name, user_id)
                     print('Backblast error on Q at AO:', ao_id, 'Date:', msg_date, 'Posted By:', user_name, ". Slack message sent to Q. bd: ", bd_date, "cutoff:", cutoff_date)
-                    slack.chat.post_message(user_id, "Hey " + user_name + "! I just saw your backblast posted on " + msg_date + " at <#" + ao_id + ">. There seems to be a problem. The Q is not present or not tagged correctly. Can you fix it? The correct syntax is\n \nQ: @tag_the_q_here\n \nThanks!")
+                    slack.chat_postMessage(channel=user_id, text="Hey " + user_name + "! I just saw your backblast posted on " + msg_date + " at <#" + ao_id + ">. There seems to be a problem. The Q is not present or not tagged correctly. Can you fix it? The correct syntax is\n \nQ: @tag_the_q_here\n \nThanks!")
                     qc = 0
                 else:
                     pass
                 if pax_count == -1:
                     logging.warning("Count error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, msg_date, user_name, user_id)
                     print('Backblast error on Count - AO:', ao_id, 'Date:', msg_date, 'Posted By:', user_name, ". Slack message sent to Q.")
-                    slack.chat.post_message(user_id, "Hey " + user_name + "! I just saw your backblast posted on " + msg_date + " at <#" + ao_id + ">. There seems to be a problem. The Count is not present or not entered correctly. Can you fix it? The correct syntax is \n \nCount: XX (You can also use 'Total:'). Use digits please. \n\nThanks!")
+                    slack.chat_postMessage(channel=user_id, text="Hey " + user_name + "! I just saw your backblast posted on " + msg_date + " at <#" + ao_id + ">. There seems to be a problem. The Count is not present or not entered correctly. Can you fix it? The correct syntax is \n \nCount: XX (You can also use 'Total:'). Use digits please. \n\nThanks!")
                     qc = 0
                 else:
                     pass
                 if bd_date == '2099-12-31':
                     logging.warning("Date error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, msg_date, user_name, user_id)
                     print('Backblast error on Date - AO:', ao_id, 'Date:', msg_date, 'Posted By:', user_name,". Slack message sent to Q. bd: ", bd_date, "cutoff:", cutoff_date)
-                    slack.chat.post_message(user_id, "Hey " + user_name + "! I just saw your backblast posted on " + msg_date + " at <#" + ao_id + ">. There seems to be a problem. The Date is not entered correctly. Can you fix it? I can understand most common date formats like: \n \nDate: 12-25-2020\nDate: 2020-12-25\nDate: 12/25/20\nDate: December 25, 2020\nAnd even more... which means you must have used something really weird.\n\nThanks!")
+                    slack.chat_postMessage(channel=user_id, text="Hey " + user_name + "! I just saw your backblast posted on " + msg_date + " at <#" + ao_id + ">. There seems to be a problem. The Date is not entered correctly. Can you fix it? I can understand most common date formats like: \n \nDate: 12-25-2020\nDate: 2020-12-25\nDate: 12/25/20\nDate: December 25, 2020\nAnd even more... which means you must have used something really weird.\n\nThanks!")
                     qc = 0
                 if qc == 1:
                     cursor.execute(sql, val)
@@ -278,7 +300,7 @@ try:
                         print('Co-Q', coq_user_id)
                         print('Pax Count:',pax_count)
                         print('fngs:', fngs)
-                        slack.chat.post_message(user_id, "Hey " + user_name + "! I just captured and recorded your backblast for " + bd_date + " at <#" + ao_id + ">. I see you had " + str(math.trunc(pax_count)) + " PAX in attendance and FNGs were: " + str(fngs) + ". Thanks for posting your BB!")
+                        slack.chat_postMessage(channel=user_id, text="Hey " + user_name + "! I just captured and recorded your backblast for " + bd_date + " at <#" + ao_id + ">. I see you had " + str(math.trunc(pax_count)) + " PAX in attendance and FNGs were: " + str(fngs) + ". Thanks for posting your BB!")
                         print("Slack message sent to Q.")
                         logging.info("Backblast imported for AO: %s, Date: %s", ao_id, bd_date)
                 #Add the Q to the bd_attendance table as some Q's are forgetting to add themselves to the PAX line
@@ -286,11 +308,11 @@ try:
                     if q_user_id == 'NA':
                         pass
                     else:
-                        sql2 = "INSERT IGNORE into bd_attendance (user_id, ao_id, date) VALUES (%s, %s, %s)"
+                        sql2 = "INSERT IGNORE into bd_attendance (user_id, ao_id, date, q_user_id) VALUES (%s, %s, %s, %s)"
                         user_id = row['q_user_id']
                         ao_id = row['ao_id']
                         date = row['bd_date']
-                        val2 = (user_id, ao_id, date)
+                        val2 = (user_id, ao_id, date, user_id)
                         cursor.execute(sql2, val2)
                         mydb.commit()
                         if cursor.rowcount == 1:
@@ -300,14 +322,6 @@ try:
 
         sql3 = "UPDATE beatdowns SET coq_user_id=NULL where coq_user_id = 'NA'"
         cursor.execute(sql3)
-        mydb.commit()
-
-        sql4 = "UPDATE beatdowns SET fng_count = 0 WHERE fng_count IS NULL AND fngs LIKE '%None%'"
-        cursor.execute(sql4)
-        mydb.commit()
-
-        sql5 = "UPDATE beatdowns SET fng_count = 0 WHERE fng_count IS NULL AND fngs = 0"
-        cursor.execute(sql5)
         mydb.commit()
 
 finally:

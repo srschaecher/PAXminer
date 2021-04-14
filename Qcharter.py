@@ -45,6 +45,7 @@ mydb = pymysql.connect(
 
 #Get Current Year, Month Number and Name
 d = datetime.datetime.now()
+d = d - datetime.timedelta(days=1)
 thismonth = d.strftime("%m")
 thismonthname = d.strftime("%b")
 thismonthnamelong = d.strftime("%B")
@@ -67,8 +68,8 @@ for ao in aos_df['ao']:
     day = []
     year = []
     with mydb.cursor() as cursor:
-        sql = "SELECT * FROM beatdown_info WHERE AO = %s AND YEAR(Date) = %s ORDER BY Date"
-        val = (ao, yearnum)
+        sql = "SELECT * FROM beatdown_info WHERE AO = %s AND YEAR(Date) = %s AND MONTH(Date) = %s ORDER BY Date"
+        val = (ao, yearnum, thismonth)
         cursor.execute(sql, val)
         bd_tmp = cursor.fetchall()
         bd_tmp_df = pd.DataFrame(bd_tmp)
@@ -84,15 +85,20 @@ for ao in aos_df['ao']:
             month_order = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
                            "October", "November", "December"]
             try:
-                bd_tmp_df.groupby(['Month', 'Q']).size().unstack().sort_values(['Month'], ascending=False).plot(kind='bar')
-                plt.title('Number of Qs by individual at ' + ao + ' by Month for ' + yearnum)
-                plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
+                bd_tmp_df.groupby(['Q', 'Month']).size().unstack().sort_values(['Q'], ascending=True).plot(kind='bar')
+                plt.title('Number of Qs by individual at ' + ao + ' for ' + thismonthnamelong + ', ' + yearnum)
+                #plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False)
+                plt.legend('')
                 plt.ioff()
-                #ao = 'U0187M4NWG4' #Use this for testing to send all charts to a specific user
+                #ax = bd_tmp_df.plot.bar(x='Q', color={"ao": "orange"})
+                #plt.title("Q Counts - " + ao + " " + thismonthnamelong + ", " + yearnum)
+                #plt.xlabel("")
+                #plt.ylabel("# Q Counts for " + thismonthname + ", " + yearnum)
                 plt.savefig('./plots/' + db + '/Q_Counts_' + ao + "_" + thismonthname + yearnum + '.jpg', bbox_inches='tight')  # save the figure to a file
                 print('Q Graph created for AO', ao, 'Sending to Slack now... hang tight!')
-                slack.chat.post_message(ao, 'Hey ' + ao + '! Here is a look at who has Qd at this AO by month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!')
-                slack.files.upload('./plots/' + db + '/Q_Counts_' + ao + "_" + thismonthname + yearnum + '.jpg', channels=ao)
+                #ao2 = 'U0187M4NWG4'  # Use this for testing to send all charts to a specific user
+                #slack.chat.post_message(ao, 'Hey ' + ao + '! Here is a look at who Qd last month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!')
+                #slack.files.upload('./plots/' + db + '/Q_Counts_' + ao + "_" + thismonthname + yearnum + '.jpg', channels=ao)
                 total_graphs = total_graphs + 1
             except:
                 print('An Error Occurred in Sending')
@@ -128,7 +134,7 @@ try:
             plt.savefig('./plots/' + db + '/Q_Counts_' + db + "_" + thismonthname + yearnum + '.jpg',
                         bbox_inches='tight')  # save the figure to a file
             print('Q Graph created for ', region, 'Sending to Slack now... hang tight!')
-            slack.chat.post_message(firstf, 'Hey ' + region + '! Here is a look at who has Qd across all AOs by month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!')
+            slack.chat.post_message(firstf, 'Hey ' + region + '! Here is a look at who Qd across all AOs last month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!')
             slack.files.upload('./plots/' + db + '/Q_Counts_' + db + "_" + thismonthname + yearnum + '.jpg',
                                channels=firstf)
             total_graphs = total_graphs + 1
