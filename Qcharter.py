@@ -97,7 +97,7 @@ for ao in aos_df['ao']:
                 print('Q Graph created for AO', ao, 'Sending to Slack now... hang tight!')
                 #ao2 = 'U0187M4NWG4'  # Use this for testing to send all charts to a specific user
                 #slack.chat.post_message(ao, 'Hey ' + ao + '! Here is a look at who Qd last month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!')
-                #slack.files_upload(channels=ao, initial_comment='Hey ' + ao + '! Here is a look at who Qd last month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!', file='./plots/' + db + '/Q_Counts_' + ao + "_" + thismonthname + yearnum + '.jpg')
+                slack.files_upload(channels=ao, initial_comment='Hey ' + ao + '! Here is a look at who Qd last month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!', file='./plots/' + db + '/Q_Counts_' + ao + "_" + thismonthname + yearnum + '.jpg')
                 total_graphs = total_graphs + 1
             except:
                 print('An Error Occurred in Sending')
