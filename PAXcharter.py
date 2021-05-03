@@ -5,7 +5,7 @@ This script queries Slack for all PAX Users and their respective beatdown attend
 on attendance for each member and sends it to them in a private Slack message.
 '''
 
-from slacker import Slacker
+from slack_sdk import WebClient
 import pandas as pd
 import pymysql.cursors
 import configparser
@@ -29,8 +29,7 @@ db = sys.argv[1]
 
 # Set Slack token
 key = sys.argv[2]
-#key = config['slack']['prod_key']
-slack = Slacker(key)
+slack = WebClient(token=key)
 
 #Define AWS Database connection criteria
 mydb = pymysql.connect(
@@ -44,19 +43,38 @@ mydb = pymysql.connect(
 
 #Get Current Year, Month Number and Name
 d = datetime.datetime.now()
-d = d - datetime.timedelta(days=1)
+d = d - datetime.timedelta(days=3)
 thismonth = d.strftime("%m")
 thismonthname = d.strftime("%b")
 thismonthnamelong = d.strftime("%B")
 yearnum = d.strftime("%Y")
 
 print('Looking for all Slack Users for ' + db + '. Stand by...')
+
 # Make users Data Frame
-users_response = slack.users.list()
-users = users_response.body['members']
-users_df = pd.json_normalize(users)
-users_df = users_df[['id', 'profile.display_name', 'profile.real_name', 'profile.phone', 'profile.email']]
-users_df = users_df.rename(columns={'id' : 'user_id', 'profile.display_name' : 'user_name', 'profile.real_name' : 'real_name', 'profile.phone' : 'phone', 'profile.email' : 'email'})
+column_names = ['user_id', 'user_name', 'real_name']
+users_df = pd.DataFrame(columns = column_names)
+data = ''
+while True:
+    users_response = slack.users_list(limit=1000, cursor=data)
+    response_metadata = users_response.get('response_metadata', {})
+    next_cursor = response_metadata.get('next_cursor')
+    users = users_response.data['members']
+    users_df_tmp = pd.json_normalize(users)
+    users_df_tmp = users_df_tmp[['id', 'profile.display_name', 'profile.real_name']]
+    users_df_tmp = users_df_tmp.rename(columns={'id' : 'user_id', 'profile.display_name' : 'user_name', 'profile.real_name' : 'real_name'})
+    users_df = users_df.append(users_df_tmp, ignore_index=True)
+    if next_cursor:
+        # Keep going from next offset.
+        #print('next_cursor =' + next_cursor)
+        data = next_cursor
+    else:
+        break
+for index, row in users_df.iterrows():
+    un_tmp = row['user_name']
+    rn_tmp = row['real_name']
+    if un_tmp == "" :
+        row['user_name'] = rn_tmp
 
 print('Now pulling all of those users beatdown attendance records... Stand by...')
 
@@ -80,7 +98,7 @@ for user_id in users_df['user_id']:
                 year = []
                 count = attendance_tmp_df.shape[0]
                 if (total_graphs in pause_on):
-                    time.sleep(1)
+                    time.sleep(20)
                 #if user_id_tmp == 'U0187M4NWG4': #Use this to send a graph to only 1 specific PAX
                 if count > 0: # This sends a graph to ALL PAX who have attended at least 1 beatdown
                     for Date in attendance_tmp_df['Date']:
@@ -102,12 +120,14 @@ for user_id in users_df['user_id']:
                     plt.savefig('./plots/' + db + '/' + user_id_tmp + "_" + thismonthname + yearnum + '.jpg', bbox_inches='tight') #save the figure to a file
                     total_graphs = total_graphs + 1
                     #manual_graphs = [240,241,242,244,245,246,247,249,250]
-                    if total_graphs > 0 # This is a count of total users processed, in case of error during processing. Set the total_graphs > to whatever # comes next in the log file row count.
+                    if total_graphs > 0: # This is a count of total users processed, in case of error during processing. Set the total_graphs > to whatever # comes next in the log file row count.
                         print(total_graphs, 'PAX posting graph created for user', pax, 'Sending to Slack now... hang tight!')
-                        slack.chat.post_message(user_id_tmp, 'Hey ' + pax + "! Here is your monthly posting summary for " + yearnum + ". \nPush yourself, get those bars higher every month! SYITG!")
-                        slack.files.upload('./plots/' + db + '/' + user_id_tmp + "_" + thismonthname + yearnum + '.jpg',channels=user_id_tmp)
+                        #slack.chat.post_message(user_id_tmp, 'Hey ' + pax + "! Here is your monthly posting summary for " + yearnum + ". \nPush yourself, get those bars higher every month! SYITG!")
+                        slack.files_upload(channels=user_id_tmp, initial_comment='Hey ' + pax + "! Here is your monthly posting summary for " + yearnum + ". \nPush yourself, get those bars higher every month! SYITG!", file='./plots/' + db + '/' + user_id_tmp + "_" + thismonthname + yearnum + '.jpg')
                         attendance_tmp_df.hist()
                         os.system("echo " + user_id_tmp + " >>" + "./logs/" + db + "/PAXcharter.log")
+                    else:
+                        print(pax + 'skipped')
     except:
             print("An exception occurred")
     finally:

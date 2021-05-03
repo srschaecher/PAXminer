@@ -5,7 +5,7 @@ This script queries the AWS F3(region) database for all beatdown records. It the
 on total posts and beatdowns for each AO and sends it to the 1st F channel in a Slack message.
 '''
 
-from slacker import Slacker
+from slack_sdk import WebClient
 import pandas as pd
 import pymysql.cursors
 import configparser
@@ -32,8 +32,7 @@ region = sys.argv[3]
 
 # Set Slack token
 key = sys.argv[2]
-#key = config['slack']['prod_key']
-slack = Slacker(key)
+slack = WebClient(token=key)
 firstf = sys.argv[4] #parameter input for designated 1st-f channel for the region
 
 #Define AWS Database connection criteria
@@ -50,7 +49,7 @@ total_graphs = 0 # Sets a counter for the total number of graphs made (users wit
 
 #Get Current Year, Month Number and Name
 d = datetime.datetime.now()
-d = d - datetime.timedelta(days=1)
+d = d - datetime.timedelta(days=3)
 thismonth = d.strftime("%m")
 thismonthname = d.strftime("%b")
 thismonthnamelong = d.strftime("%B")
@@ -80,8 +79,8 @@ try:
         #fig = ff.create_table(bd_df_styled)
         #fig.write_image('./plots/' + db + '/AO_SummaryTable' + thismonthname + yearnum + '.jpg')
         print('AO summary table created for all AOs. Sending to Slack now... hang tight!')
-        slack.chat.post_message(firstf, "Hey " + region + " - it's the First of the Month! (queue Bone, Thungz and Harmony tunes here)! Here is a detailed summary of AO posting stats for the region last month.")
-        slack.files.upload('./plots/' + db + '/AO_SummaryTable' + thismonthname + yearnum + '.jpg', channels=firstf)
+        #slack.chat_postMessage(channel=firstf, text="Hey " + region + " - it's the First of the Month! (queue Bone, Thungz and Harmony tunes here)! Here is a detailed summary of AO posting stats for the region last month.")
+        slack.files_upload(channels=firstf, initial_comment="Hey " + region + " - it's the First of the Month! (queue Bone, Thungz and Harmony tunes here)! Here is a detailed summary of AO posting stats for the region last month.", file='./plots/' + db + '/AO_SummaryTable' + thismonthname + yearnum + '.jpg')
         total_graphs = total_graphs + 1
 finally:
     print('Total graphs made:', total_graphs)

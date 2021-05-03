@@ -5,7 +5,7 @@ This script queries the AWS F3(region) database for all beatdown records. It the
 on Q's for each AO and sends it to the AO channel in a Slack message.
 '''
 
-from slacker import Slacker
+from slack_sdk import WebClient
 import pandas as pd
 import pymysql.cursors
 import configparser
@@ -29,8 +29,7 @@ region = sys.argv[3]
 
 # Set Slack token
 key = sys.argv[2]
-#key = config['slack']['prod_key']
-slack = Slacker(key)
+slack = WebClient(token=key)
 firstf = sys.argv[4] #designated 1st-f channel for the region
 
 #Define AWS Database connection criteria
@@ -45,7 +44,7 @@ mydb = pymysql.connect(
 
 #Get Current Year, Month Number and Name
 d = datetime.datetime.now()
-d = d - datetime.timedelta(days=1)
+d = d - datetime.timedelta(days=3)
 thismonth = d.strftime("%m")
 thismonthname = d.strftime("%b")
 thismonthnamelong = d.strftime("%B")
@@ -98,7 +97,7 @@ for ao in aos_df['ao']:
                 print('Q Graph created for AO', ao, 'Sending to Slack now... hang tight!')
                 #ao2 = 'U0187M4NWG4'  # Use this for testing to send all charts to a specific user
                 #slack.chat.post_message(ao, 'Hey ' + ao + '! Here is a look at who Qd last month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!')
-                #slack.files.upload('./plots/' + db + '/Q_Counts_' + ao + "_" + thismonthname + yearnum + '.jpg', channels=ao)
+                #slack.files_upload(channels=ao, initial_comment='Hey ' + ao + '! Here is a look at who Qd last month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!', file='./plots/' + db + '/Q_Counts_' + ao + "_" + thismonthname + yearnum + '.jpg')
                 total_graphs = total_graphs + 1
             except:
                 print('An Error Occurred in Sending')
@@ -134,9 +133,8 @@ try:
             plt.savefig('./plots/' + db + '/Q_Counts_' + db + "_" + thismonthname + yearnum + '.jpg',
                         bbox_inches='tight')  # save the figure to a file
             print('Q Graph created for ', region, 'Sending to Slack now... hang tight!')
-            slack.chat.post_message(firstf, 'Hey ' + region + '! Here is a look at who Qd across all AOs last month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!')
-            slack.files.upload('./plots/' + db + '/Q_Counts_' + db + "_" + thismonthname + yearnum + '.jpg',
-                               channels=firstf)
+            #slack.chat.post_message(firstf, 'Hey ' + region + '! Here is a look at who Qd across all AOs last month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!')
+            slack.files_upload(channels=firstf, initial_comment='Hey ' + region + '! Here is a look at who Qd across all AOs last month. Is your name on this list? Remember Core Principle #4 - F3 is peer led on a rotating fashion. Exercise your leadership muscles. Sign up to Q!', file='./plots/' + db + '/Q_Counts_' + db + "_" + thismonthname + yearnum + '.jpg')
             total_graphs = total_graphs + 1
 finally:
     print('Total Q summary graphs made:', total_graphs)

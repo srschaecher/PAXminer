@@ -5,7 +5,7 @@ This script queries the AWS F3(region) database for all beatdown records. It the
 on total unique PAX attendance for each AO and sends it to the 1st F channel in a Slack message.
 '''
 
-from slacker import Slacker
+from slack_sdk import WebClient
 import pandas as pd
 import pymysql.cursors
 import configparser
@@ -29,8 +29,7 @@ region = sys.argv[3]
 
 # Set Slack token
 key = sys.argv[2]
-#key = config['slack']['prod_key']
-slack = Slacker(key)
+slack = WebClient(token=key)
 firstf = sys.argv[4] #parameter input for designated 1st-f channel for the region
 #firstf = 'U0187M4NWG4' #use this for testing messages to a specific user
 
@@ -48,7 +47,7 @@ total_graphs = 0 # Sets a counter for the total number of graphs made (users wit
 
 #Get Current Year, Month Number and Name
 d = datetime.datetime.now()
-d = d - datetime.timedelta(days=1)
+d = d - datetime.timedelta(days=3)
 thismonth = d.strftime("%m")
 thismonthname = d.strftime("%b")
 thismonthnamelong = d.strftime("%B")
@@ -68,8 +67,8 @@ try:
         plt.ioff()
         plt.savefig('./plots/' + db + '/PAX_Counts_By_AO_' + thismonthname + yearnum + '.jpg', bbox_inches='tight')  # save the figure to a file
         print('Unique PAX graph created for unique PAX across all AOs. Sending to Slack now... hang tight!')
-        slack.chat.post_message(firstf, "Hello " + region + "! Here is a quick look at how many UNIQUE PAX attended beatdowns by AO by Month for " + yearnum + "!")
-        slack.files.upload('./plots/' + db + '/PAX_Counts_By_AO_' + thismonthname + yearnum + '.jpg', channels=firstf)
+        #slack.chat.post_message(firstf, "Hello " + region + "! Here is a quick look at how many UNIQUE PAX attended beatdowns by AO by Month for " + yearnum + "!")
+        slack.files_upload(channels=firstf, initial_comment="Hello " + region + "! Here is a quick look at how many UNIQUE PAX attended beatdowns by AO by Month for " + yearnum + "!", file='./plots/' + db + '/PAX_Counts_By_AO_' + thismonthname + yearnum + '.jpg')
         total_graphs = total_graphs + 1
 finally:
     print('Total graphs made:', total_graphs)
