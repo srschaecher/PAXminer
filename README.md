@@ -1,7 +1,7 @@
 <img src="https://f3nation.com/wp-content/uploads/2020/07/f3_2000x2000_circle-1024x1024-1-1024x1024-1-e1594083589231.png" align="right" />
 
 # PAXminer
-PAXminer is a set of processes that retrieve and parse messages from an F3 unit's Slack communications channels in order to pull key information out of Backblasts and store that information in a database for recordkeeping purposes. It also automatically generates stats graphs and charts and sends those to individual PAX as well as to AOs and Regions (1st-F) to highlight monthly or yearly posting statistics.
+PAXminer is a set of processes that retrieve and parse messages from an F3 region's Slack communications channels in order to capture Backblasts, pull key information out of Backblasts and store that information in a database for recordkeeping purposes. It also automatically generates stats graphs and charts and sends those to individual PAX as well as to AOs and Regions (1st-F) to highlight monthly or yearly posting statistics.
 
 PAXminer pulls the following infomation from Backblasts and sends it to a shared database in AWS RDS (Amazon Web Services - Relational Database Service). Each region using PAXminer gets a dedicated schema for their data.
 
