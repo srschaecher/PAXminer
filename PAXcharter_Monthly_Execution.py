@@ -55,8 +55,5 @@ for index, row in regions_df.iterrows():
     #firstf = 'U0187M4NWG4' # <--- Use this if sending a test msg to a specific user
     print('Processing statistics for region ' + region)
     os.system("./PAXcharter.py " + db + " " + key)
-    #os.system("./Qcharter.py " + db + " " + key + " " + region + " " + firstf)
-    #os.system("./UniquePAXCharter.py " + db + " " + key + " " + region + " " + firstf)
-    #os.system("./AOcharter.py " + db + " " + key + " " + region + " " + firstf)
     print('----------------- End of Region Update -----------------\n')
 print('\nPAXcharter execution complete.')

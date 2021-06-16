@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 '''
 This script was written by Beaker from F3STL. Questions? @srschaecher on twitter or srschaecher@gmail.com.
-This script executes the monthly PAXcharter backblast queries and data updates for all F3 regions using PAXminer.
+This script executes the monthly LeaderboardByAO chart maker for all F3 regions using PAXminer.
 '''
 
 from slacker import Slacker
@@ -9,6 +9,11 @@ import pandas as pd
 import pymysql.cursors
 import configparser
 import os
+
+# Set the working directory to the directory of the script
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
 
 # Configure AWS credentials
 config = configparser.ConfigParser();
@@ -35,7 +40,7 @@ mydb1 = pymysql.connect(
 # Get list of regions and Slack tokens for PAXminer execution
 try:
     with mydb1.cursor() as cursor:
-        sql = "SELECT * FROM paxminer.regions where region = 'STL'" # <-- Update this for whatever region is being tested
+        sql = "SELECT * FROM paxminer.regions where firstf_channel IS NOT NULL AND send_region_uniquepax_chart = 1"
         cursor.execute(sql)
         regions = cursor.fetchall()
         regions_df = pd.DataFrame(regions)
@@ -49,11 +54,6 @@ for index, row in regions_df.iterrows():
     firstf = row['firstf_channel']
     #firstf = 'U0187M4NWG4' # <--- Use this if sending a test msg to a specific user
     print('Processing statistics for region ' + region)
-    #os.system("./PAXcharter.py " + db + " " + key)
     os.system("./UniquePAXCharter.py " + db + " " + key + " " + region + " " + firstf)
-    #os.system("./QCharter.py " + db + " " + key + " " + region + " " + firstf)
-    #os.system("./Leaderboard_Charter.py " + db + " " + key + " " + region + " " + firstf)
-    #os.system("./LeaderboardByAO_Charter.py " + db + " " + key + " " + region + " " + firstf)
-    #os.system("./AOCharter.py " + db + " " + key + " " + region + " " + firstf)
     print('----------------- End of Region Update -----------------\n')
-print('\nPAXcharter execution complete.')
+print('\nLeaderboardByAO_Charter execution complete.')

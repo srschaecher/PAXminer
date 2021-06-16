@@ -209,36 +209,26 @@ for index, row in f3_df.iterrows():
     text_tmp = re.sub('_\*', '', str(text_tmp))
     text_tmp = re.sub('\*_', '', str(text_tmp))
     text_tmp = re.sub('\*', '', str(text_tmp))
-    if db in ['f3meca','f3memphis']:
-        if re.findall('^Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-        elif re.findall('^Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-        elif re.findall('^\*Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^\*Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-        elif re.findall('^\*Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-        elif re.findall('^Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-        elif re.findall('^Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-        elif re.findall('^\*Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-        elif re.findall('^Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-        elif re.findall('^\*Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-    elif db != 'f3meca':
-        if re.findall('^Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-        elif re.findall('^Back blast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-        elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
-        elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            list_pax()
+    if re.findall('^Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
+    elif re.findall('^Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
+    elif re.findall('^\*Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^\*Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
+    elif re.findall('^\*Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
+    elif re.findall('^Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
+    elif re.findall('^Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
+    elif re.findall('^\*Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
+    elif re.findall('^Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
+    elif re.findall('^\*Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
     text_tmp = re.sub('\*', '', text_tmp, re.MULTILINE)
 
 # Now connect to the AWS database and insert some rows!

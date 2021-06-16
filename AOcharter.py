@@ -61,26 +61,26 @@ cm = sns.light_palette("green", as_cmap=True)
 # Query AWS by for beatdown history
 try:
     with mydb.cursor() as cursor:
-        sql = "select av.AO, x.TotalPax as TotalPax, count(distinct av.PAX) as TotalUniquePax, count(Distinct av.Date) as BDs, Round(x.TotalPax/count(Distinct av.Date),1) as AvgAttendance,sum(Distinct bd.fng_count) as TotalFNGs, MONTH(av.Date) as Month,Year(av.date) as Year \
+        sql = "select av.AO, x.TotalPosts as TotalPosts, count(distinct av.PAX) as TotalUniquePax, count(Distinct av.Date) as BDs, Round(x.TotalPosts/count(Distinct av.Date),1) as AvgAttendance,sum(Distinct bd.fng_count) as TotalFNGs, MONTH(av.Date) as Month,Year(av.date) as Year \
         from attendance_view av \
         left outer join beatdown_info bd on bd.AO = av.ao and bd.date = av.Date \
-        left outer join (select sum(pax_count) as TotalPax, AO, month(Date) as month, year(Date) as Year from beatdown_info GROUP BY year, month, AO) x on x.AO = av.AO and x.month=(month(av.date)) and x.year = (year(av.date)) \
+        left outer join (select sum(pax_count) as TotalPosts, AO, month(Date) as month, year(Date) as Year from beatdown_info GROUP BY year, month, AO) x on x.AO = av.AO and x.month=(month(av.date)) and x.year = (year(av.date)) \
         WHERE Year = %s \
         AND Month = %s \
         GROUP BY year, Month, AO \
-        order by Year desc, Month desc, Round(x.TotalPax/count(Distinct av.Date),1) desc"
+        order by Year desc, Month desc, Round(x.TotalPosts/count(Distinct av.Date),1) desc"
         val = (yearnum, thismonth)
         cursor.execute(sql,val)
         bd_tmp = cursor.fetchall()
         bd_tmp_df = pd.DataFrame(bd_tmp)
         bd_tmp_df['Month'] = bd_tmp_df['Month'].replace([1,2,3,4,5,6,7,8,9,10,11,12], ['January','February','March','April','May','June','July','August','September','October','November','December'])
-        bd_df_styled = bd_tmp_df.style.background_gradient(cmap=cm, subset=['TotalPax', 'TotalUniquePax']).set_caption("This region is ON FIRE!")
+        bd_df_styled = bd_tmp_df.style.background_gradient(cmap=cm, subset=['TotalPosts', 'TotalUniquePax']).set_caption("This region is ON FIRE!")
         dfi.export(bd_df_styled, './plots/' + db + '/AO_SummaryTable' + thismonthname + yearnum + '.jpg')  # save the figure to a file
         #fig = ff.create_table(bd_df_styled)
         #fig.write_image('./plots/' + db + '/AO_SummaryTable' + thismonthname + yearnum + '.jpg')
         print('AO summary table created for all AOs. Sending to Slack now... hang tight!')
         #slack.chat_postMessage(channel=firstf, text="Hey " + region + " - it's the First of the Month! (queue Bone, Thungz and Harmony tunes here)! Here is a detailed summary of AO posting stats for the region last month.")
-        slack.files_upload(channels=firstf, initial_comment="Hey " + region + " - it's the First of the Month! (queue Bone, Thungz and Harmony tunes here)! Here is a detailed summary of AO posting stats for the region last month.", file='./plots/' + db + '/AO_SummaryTable' + thismonthname + yearnum + '.jpg')
+        slack.files_upload(channels=firstf, initial_comment="Hey " + region + " - it's that time of the Month again. Here is a detailed summary of AO posting stats for the region last month.", file='./plots/' + db + '/AO_SummaryTable' + thismonthname + yearnum + '.jpg')
         total_graphs = total_graphs + 1
 finally:
     print('Total graphs made:', total_graphs)

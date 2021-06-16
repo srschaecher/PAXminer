@@ -219,37 +219,27 @@ for index, row in f3_df.iterrows():
     text_tmp = re.sub('\*', '', str(text_tmp))
     user_name = row['user_name']
     user_id = row['user_id']
-    if db in ['f3meca','f3memphis']:
-        if re.findall('^Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^\*Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^\*Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^\*Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^\*Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^\*Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-    elif db != 'f3meca':
-        if re.findall('^Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^Back blast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-        elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE | re.MULTILINE):
-            bd_info()
-    text_tmp = re.sub('\*', '', text_tmp, re.MULTILINE)
+    if re.findall('^Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^\*Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^\*Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^\*Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^\*Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^Slackbast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^\*Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+
 # Now connect to the AWS database and insert some rows!
 try:
     with mydb.cursor() as cursor:
@@ -324,6 +314,33 @@ try:
         cursor.execute(sql3)
         mydb.commit()
 
+        sql4 = "UPDATE beatdowns SET fng_count=0 where fngs in ('none', 'None', 'None listed', 'NA', 'zero', '-', '') AND fng_count IS NULL"
+        cursor.execute(sql4)
+        mydb.commit()
+
+        sql5 = "UPDATE beatdowns SET fng_count = 0 where fngs like '0%' AND fng_count IS NULL"
+        cursor.execute(sql5)
+        mydb.commit()
+
+        sql6 = "UPDATE beatdowns SET fng_count = 1 where fngs like '1%' AND fng_count IS NULL"
+        cursor.execute(sql6)
+        mydb.commit()
+
+        sql7 = "UPDATE beatdowns SET fng_count = 2 where fngs like '2%' AND fng_count IS NULL"
+        cursor.execute(sql7)
+        mydb.commit()
+
+        sql8 = "UPDATE beatdowns SET fng_count = 3 where fngs like '3%' AND fng_count IS NULL"
+        cursor.execute(sql8)
+        mydb.commit()
+
+        sql9 = "UPDATE beatdowns SET fng_count = 4 where fngs like '4%' AND fng_count IS NULL"
+        cursor.execute(sql9)
+        mydb.commit()
+
+        sql10 = "UPDATE beatdowns SET fng_count = 5 where fngs like '5%' AND fng_count IS NULL"
+        cursor.execute(sql10)
+        mydb.commit()
 finally:
     mydb.close()
 print('Finished. Beatdowns are up to date.')

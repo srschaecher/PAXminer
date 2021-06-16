@@ -30,8 +30,8 @@ region = sys.argv[3]
 # Set Slack token
 key = sys.argv[2]
 slack = WebClient(token=key)
-firstf = sys.argv[4] #parameter input for designated 1st-f channel for the region
-#firstf = 'U0187M4NWG4' #use this for testing messages to a specific user
+#firstf = sys.argv[4] #parameter input for designated 1st-f channel for the region
+firstf = 'U0187M4NWG4' #use this for testing messages to a specific user
 
 #Define AWS Database connection criteria
 mydb = pymysql.connect(
