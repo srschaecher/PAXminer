@@ -1,7 +1,7 @@
 <img src="https://f3nation.com/wp-content/uploads/2020/07/f3_2000x2000_circle-1024x1024-1-1024x1024-1-e1594083589231.png" align="right" />
 
 # PAXminer
-PAXminer is a set of proesses that retrieve and parse messages from an F3 unit's Slack communications channels in order to pull key information out of Backblasts and store that information in a database for recordkeeping purposes. It also automatically generates stats graphs and charts and sends those to individual PAX as well as to AOs and Regions (1st-F) to highlight monthly or yearly posting statistics.
+PAXminer is a set of processes that retrieve and parse messages from an F3 region's Slack communications channels in order to capture Backblasts, pull key information out of Backblasts and store that information in a database for recordkeeping purposes. It also automatically generates stats graphs and charts and sends those to individual PAX as well as to AOs and Regions (1st-F) to highlight monthly or yearly posting statistics.
 
 PAXminer pulls the following infomation from Backblasts and sends it to a shared database in AWS RDS (Amazon Web Services - Relational Database Service). Each region using PAXminer gets a dedicated schema for their data.
 
@@ -18,7 +18,7 @@ This tool started out with me saying "there HAS to be a beter way to do this" as
 
 
 ## Setting up a new region to use PAXminer
-Paxminer was designed to be a multi-region tool running in the cloud. Adding a new region to use PAXminer is fairly simple and straightforward. While you are welcome to download the scripts and implement your own version, you can be up and running quickly if you choose to use the existing platform. All you need to do to start is to add the app to your local Slack workspace as detailed below, then contact Beaker (F3STL) who will add your region to the workflow.
+Paxminer was designed to be a multi-region tool running in the cloud. Adding a new region to use PAXminer is simple and straightforward. While you are welcome to download the scripts and implement your own version, you can be up and running quickly if you choose to use the existing platform. All you need to do to start is to add the app to your local Slack workspace as detailed below, then contact Beaker (F3STL) who will add your region to the Nation workflow.
 
 ## Files
 - *F3SlackChannelLister.py* : Pulls all channel information from the Slack workspace and inserts/updates the info in the database. Channel info is required for the rest of the processes.
