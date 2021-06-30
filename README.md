@@ -49,8 +49,7 @@ Tracking this information lets you ask many different questions about your F3 at
 
 ## Prerequisites
 > There are some prerequisites you will need to set up first, including creating a SLACK workspace for your F3 group.
-> Beaker can work with you to quickly replicate and create your region database schema in the existing AWS environment - or you can create your own. 
-> Don't worry, I'll walk you through it all and you will be up and running in no time!
+> Beaker can work with you to quickly get you up and running on the multi-region setup, no need for you to configure and run everything up on your own.
 
 
 
