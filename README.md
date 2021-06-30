@@ -18,7 +18,7 @@ This tool started out with me saying "there HAS to be a beter way to do this" as
 
 
 ## Setting up a new region to use PAXminer
-Paxminer was designed to be a multi-region tool running in the cloud. Adding a new region to use PAXminer is simple and straightforward. While you are welcome to download the scripts and implement your own version, you can be up and running quickly if you choose to use the existing platform. All you need to do to start is to add the app to your local Slack workspace as detailed below, then contact Beaker (F3STL) who will add your region to the Nation workflow.
+For instructions on getting your F3 region up and running with PAXminer, start here: https://f3stlouis.com/paxminer/
 
 ## Files
 - *F3SlackChannelLister.py* : Pulls all channel information from the Slack workspace and inserts/updates the info in the database. Channel info is required for the rest of the processes.
@@ -59,29 +59,6 @@ If you don't already have one, you will need to first create a new Slack workspa
 
 - ["Create a New Slack Workspace"](https://slack.com/get-started#/create) - For setting up an entirely new workspace
 - ["Sign in to your existing workspace"](https://slack.com/signin#/signin) - If you already have a workspace
-
-## Create a new PAXminer app hook in Slack and make note of the security key
-Don't worry, it's a lot easier than it sounds. You must have admin privileges in your Slack workspace in order to do this. The first thing you need to do is just to tell slack "hey, I have something that will need to access my Slack environment from outside of the Slack system." This is called an incoming webhook.
-- From your Slack workspace, click on the workspace name dropdown menu -> Settings & Administration -> Manage Apps 
-- <img src="https://manula.r.sizr.io/large/user/12398/img/slack-admin-mngapps.png" align="center" />
-- Click "Build" on the top right of your screen
-- Click "Create New App"
-- Enter App Name = "PAXminer"
-- Select your F3 Workspace
-- Click "Create" and then select "Incoming Webhooks" functionality needed for your app
-- Turn on the "Activate Incoming Webhooks" toggle
-- Click "Add New Webhook to Workspace"
-- Slack will ask you "Where should PAXminer Post?" - select #general (or any Slack channel, it doesn't matter for now. I created a temporary #debugging channel. Anything will work.
-- Click "Allow"
-- After creating the app, select "OAuth & Permissions" on the left side menu
-- Find the "Bot User OAuth Access Token" and copy it - paste it somewhere for future use. You will add this to the "credentials.ini" file later.
-- Find the PaxMiner.png image (https://github.com/srschaecher/PAXminer/blob/main/PaxMiner.png) and download. Use this to replace the app image under "Basic Information" near the bottom.
-- <img src="https://user-images.githubusercontent.com/563929/82573621-94be2b00-9bb8-11ea-991c-f7ae5cfffc15.png" align="center" /> 
-- Under OAuth & Permissions, scroll down to "Scope" and click "Add an OAuth Scope". This is where you will give your new PAXminer app permissions to do things within your Slack workspace. Add all of the following scopes:
-> channels:history, channels:join, channels:read, chat:write, users.profile:read, users:read, users:read.email, commands, files:write, incoming-webhook, im:write, users:read.email
-- After adding all listed Scope settings, Slack will ask you to "Reinstall App". This just means Slack needs to re-push the app's updated settings. Scroll up and click on "Reinstall App". If the access token changes, make sure to copy it.
-- Your Slack environment is now set up for the PAXminer tool to pull messages from your Slack channels.
-
 
 ## Feedback
 - Submit a PR with your feedback!
