@@ -221,6 +221,12 @@ for index, row in f3_df.iterrows():
     user_id = row['user_id']
     if re.findall('^Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
         bd_info()
+    elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
     elif re.findall('^Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
         bd_info()
     elif re.findall('^Sackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
@@ -238,6 +244,8 @@ for index, row in f3_df.iterrows():
     elif re.findall('^Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
         bd_info()
     elif re.findall('^\*Sackdraft', text_tmp, re.IGNORECASE | re.MULTILINE):
+        bd_info()
+    elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
         bd_info()
 
 # Now connect to the AWS database and insert some rows!
@@ -269,6 +277,7 @@ try:
                 if pax_count == -1:
                     logging.warning("Count error for AO: %s, Date: %s, backblast from Q %s (ID %s) not imported", ao_id, msg_date, user_name, user_id)
                     print('Backblast error on Count - AO:', ao_id, 'Date:', msg_date, 'Posted By:', user_name, ". Slack message sent to Q.")
+                    print(backblast)
                     slack.chat_postMessage(channel=user_id, text="Hey " + user_name + "! I just saw your backblast posted on " + msg_date + " at <#" + ao_id + ">. There seems to be a problem. The Count is not present or not entered correctly. Can you fix it? The correct syntax is \n \nCount: XX (You can also use 'Total:'). Use digits please. \n\nThanks!")
                     qc = 0
                 else:

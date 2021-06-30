@@ -211,6 +211,14 @@ for index, row in f3_df.iterrows():
     text_tmp = re.sub('\*', '', str(text_tmp))
     if re.findall('^Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
         list_pax()
+    elif re.findall('^\*Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
+    elif re.findall('^\*Back blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
+    elif re.findall('^Back blast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
+    elif re.findall('^Backblast', text_tmp, re.IGNORECASE | re.MULTILINE):
+        list_pax()
     elif re.findall('^Slack blast', text_tmp, re.IGNORECASE | re.MULTILINE):
         list_pax()
     elif re.findall('^\*Slackblast', text_tmp, re.IGNORECASE | re.MULTILINE):
