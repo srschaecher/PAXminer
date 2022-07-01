@@ -175,7 +175,7 @@ def bd_info():
     else:
         pax_count = -1
     # Find the FNGs line
-    fngline = re.findall(r'(?<=\n)\*?FNGs\*?:\*?.+?(?=\n)', str(text_tmp), re.MULTILINE)  # This is regex looking for \nFNGs: with or without an * before Q
+    fngline = re.findall(r'(?<=\n)\*?FNGs?\*?:\*?.+?(?=\n)', str(text_tmp), re.MULTILINE)  # This is regex looking for \nFNGs: with or without an * before Q
     if fngline:
         fngline = fngline[0]
         fngs = re.sub('\*?FNGs\*?:\s?', '', str(fngline))
